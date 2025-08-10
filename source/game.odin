@@ -27,39 +27,48 @@ created.
 
 package game
 
-import "core:fmt"
 import "core:math/linalg"
 import rl "vendor:raylib"
+import "core:fmt"
 
 PIXEL_WINDOW_HEIGHT :: 180
+DEBUG :: true
 
-Game_Memory :: struct {
-	player_pos: rl.Vector2,
-	player_texture: rl.Texture,
-	some_number: int,
-	run: bool,
+
+Camera :: struct {}
+GameState :: struct {
+	entity_top_count: int,
+	latest_entity_id: int,
+	entities:         [MAX_ENTITIES]Entity,
+	entity_free_list: [dynamic]int,
+	game_camera:      Camera,
+	ui_camera:        Camera,
+	player_handle:    EntityHandle,
+	run:              bool,
+	scratch:          struct {
+		all_entities: []EntityHandle,
+	},
 }
 
-g: ^Game_Memory
+game_state: ^GameState
+
+get_player :: proc() -> ^Entity {
+	return entity_get(game_state.player_handle, game_state)
+}
 
 game_camera :: proc() -> rl.Camera2D {
 	w := f32(rl.GetScreenWidth())
 	h := f32(rl.GetScreenHeight())
 
-	return {
-		zoom = h/PIXEL_WINDOW_HEIGHT,
-		target = g.player_pos,
-		offset = { w/2, h/2 },
-	}
+	return {zoom = h / PIXEL_WINDOW_HEIGHT, target = get_player().pos, offset = {w / 2, h / 2}}
 }
 
 ui_camera :: proc() -> rl.Camera2D {
-	return {
-		zoom = f32(rl.GetScreenHeight())/PIXEL_WINDOW_HEIGHT,
-	}
+	return {zoom = f32(rl.GetScreenHeight()) / PIXEL_WINDOW_HEIGHT}
 }
 
-update :: proc() {
+input_dir_normalized :: proc() -> rl.Vector2 {
+
 	input: rl.Vector2
 
 	if rl.IsKeyDown(.UP) || rl.IsKeyDown(.W) {
@@ -76,11 +85,32 @@ update :: proc() {
 	}
 
 	input = linalg.normalize0(input)
-	g.player_pos += input * rl.GetFrameTime() * 100
-	g.some_number += 1
+	return input
+}
+
+update :: proc() {
+	game_state.scratch = {} // auto-zero scratch for each update
+
+	rebuild_scratch(game_state)
+
+	// big :update time
+	for handle in entity_get_all(game_state) {
+		e := entity_get(handle, game_state)
+
+		if e.collision.has_collision {
+			entity_set_collisions(e, game_state)
+		}
+
+		switch e.kind {
+		case .NIL:
+		case .PLAYER:
+			player_update(e)
+		case .COOKIE:
+		}
+	}
 
 	if rl.IsKeyPressed(.ESCAPE) {
-		g.run = false
+		game_state.run = false
 	}
 }
 
@@ -89,9 +119,19 @@ draw :: proc() {
 	rl.ClearBackground(rl.GRAY)
 
 	rl.BeginMode2D(game_camera())
-	rl.DrawTextureEx(g.player_texture, g.player_pos, 0, 1, rl.WHITE)
-	rl.DrawRectangleV({20, 20}, {10, 10}, rl.RED)
-	rl.DrawRectangleV({-30, -20}, {10, 10}, rl.GREEN)
+	// big :update time
+	for handle in entity_get_all(game_state) {
+		e := entity_get(handle, game_state)
+
+		switch e.kind {
+		case .NIL:
+		case .PLAYER:
+			player_draw(e^)
+		case .COOKIE:
+			cookie_draw(e^)
+		}
+
+	}
 	rl.EndMode2D()
 
 	rl.BeginMode2D(ui_camera())
@@ -99,11 +139,15 @@ draw :: proc() {
 	// NOTE: `fmt.ctprintf` uses the temp allocator. The temp allocator is
 	// cleared at the end of the frame by the main application, meaning inside
 	// `main_hot_reload.odin`, `main_release.odin` or `main_web_entry.odin`.
-	rl.DrawText(fmt.ctprintf("some_number: %v\nplayer_pos: %v", g.some_number, g.player_pos), 5, 5, 8, rl.WHITE)
+	rl.DrawText(fmt.ctprintf("player_pos: %v", get_player().pos), 5, 5, 8, rl.WHITE)
 
 	rl.EndMode2D()
 
 	rl.EndDrawing()
+}
+
+draw_entity_default :: proc(e: Entity) {
+	rl.DrawTextureEx(e.texture, e.pos, e.rotation, e.scale, rl.WHITE)
 }
 
 @(export)
@@ -118,7 +162,7 @@ game_update :: proc() {
 @(export)
 game_init_window :: proc() {
 	rl.SetConfigFlags({.WINDOW_RESIZABLE, .VSYNC_HINT})
-	rl.InitWindow(1280, 720, "Odin + Raylib + Hot Reload template!")
+	rl.InitWindow(1280, 720, "ogda august rl")
 	rl.SetWindowPosition(200, 200)
 	rl.SetTargetFPS(500)
 	rl.SetExitKey(nil)
@@ -126,18 +170,13 @@ game_init_window :: proc() {
 
 @(export)
 game_init :: proc() {
-	g = new(Game_Memory)
 
-	g^ = Game_Memory {
+	entity_init_core() // Initialize the safe default entity
+	game_state = new(GameState)
+	game_state^ = GameState {
 		run = true,
-		some_number = 100,
-
-		// You can put textures, sounds and music in the `assets` folder. Those
-		// files will be part any release or web build.
-		player_texture = rl.LoadTexture("assets/round_cat.png"),
 	}
-
-	game_hot_reloaded(g)
+	game_hot_reloaded(game_state)
 }
 
 @(export)
@@ -149,12 +188,12 @@ game_should_run :: proc() -> bool {
 		}
 	}
 
-	return g.run
+	return game_state.run
 }
 
 @(export)
 game_shutdown :: proc() {
-	free(g)
+	free(game_state)
 }
 
 @(export)
@@ -164,18 +203,24 @@ game_shutdown_window :: proc() {
 
 @(export)
 game_memory :: proc() -> rawptr {
-	return g
+	return game_state
 }
 
 @(export)
 game_memory_size :: proc() -> int {
-	return size_of(Game_Memory)
+	return size_of(GameState)
 }
 
 @(export)
 game_hot_reloaded :: proc(mem: rawptr) {
-	g = (^Game_Memory)(mem)
+	game_state = (^GameState)(mem)
 
+	if game_state.player_handle.id == 0 {
+		player := entity_create(.PLAYER, game_state)
+		game_state.player_handle = player.handle
+	}
+
+	entity_create(.COOKIE, game_state)
 	// Here you can also set your own global variables. A good idea is to make
 	// your global variables into pointers that point to something inside `g`.
 }
