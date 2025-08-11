@@ -4,7 +4,6 @@ import "core:fmt"
 import rl "vendor:raylib"
 
 MAX_ENTITIES :: 2048
-MAX_COLLIDABLE :: 3
 
 zero_entity: Entity // #readonly for zeroing entities
 
@@ -24,47 +23,21 @@ EntityKind :: enum {
 Entity :: struct {
 	handle:             EntityHandle,
 	kind:               EntityKind,
-	collision:          Collision,
+	collision:          CollisionShape,
 	pos:                rl.Vector2,
 	rotation:           f32,
 	scale:              f32,
 	flip_x:             bool,
-	entities_colliding: [dynamic]EntityHandle,
 	texture:            rl.Texture,
 	// animation: Animation,
 }
 
-Collision :: struct {
-	has_collision: bool,
-	rect:          rl.Rectangle,
-}
 
-entity_set_collisions :: proc(entity: ^Entity, game_state: ^GameState) {
-	all_ents := make([dynamic]^Entity, 0, len(game_state.scratch.all_entities))
-	for handle in game_state.scratch.all_entities {
-		other_entity := entity_get(handle, game_state)
-		if other_entity.collision.has_collision && other_entity.handle.id != entity.handle.id {
-			append(&all_ents, other_entity)
-		}
-	}
-
-	for i in 0 ..< len(all_ents) {
-		if i >= MAX_COLLIDABLE {
-			break
-		}
-		other_entity: ^Entity = all_ents[i]
-		if rl.CheckCollisionRecs(entity.collision.rect, other_entity.collision.rect) {
-			append(&entity.entities_colliding, other_entity.handle)
-		}
-	}
-}
-
-
-is_valid :: proc {
-	entity_is_valid,
+entity_is_valid :: proc {
+	entity_is_valid_no_ptr,
 	entity_is_valid_ptr,
 }
-entity_is_valid :: proc(entity: Entity) -> bool {
+entity_is_valid_no_ptr :: proc(entity: Entity) -> bool {
 	return entity.handle.id != 0
 }
 entity_is_valid_ptr :: proc(entity: ^Entity) -> bool {
@@ -75,22 +48,12 @@ entity_init_core :: proc() {
 	entity_setup(&zero_entity, .NIL)
 }
 
-entity_get_all :: proc(game_state: ^GameState) -> []EntityHandle {
+entity_get_all :: proc() -> []EntityHandle {
 	return game_state.scratch.all_entities
 }
-rebuild_scratch :: proc(game_state: ^GameState) {
-	// construct the list of all entities on the temp allocator
-	// that way it's easier to loop over later on
-	all_ents := make([dynamic]EntityHandle, 0, len(game_state.entities))
-	for &e in game_state.entities {
-		if !is_valid(e) do continue
-		append(&all_ents, e.handle)
-	}
-	game_state.scratch.all_entities = all_ents[:]
-}
+
 entity_get :: proc(
 	handle: EntityHandle,
-	game_state: ^GameState,
 ) -> (
 	entity: ^Entity,
 	ok: bool,
@@ -107,7 +70,7 @@ entity_get :: proc(
 	return ent, true
 }
 
-entity_create :: proc(kind: EntityKind, game_state: ^GameState) -> ^Entity {
+entity_create :: proc(kind: EntityKind) -> ^Entity {
 
 	index := -1
 	if len(game_state.entity_free_list) > 0 {
@@ -134,14 +97,13 @@ entity_create :: proc(kind: EntityKind, game_state: ^GameState) -> ^Entity {
 	return ent
 }
 
-entity_destroy :: proc(e: ^Entity, game_state: ^GameState) {
+entity_destroy :: proc(e: ^Entity) {
 	append(&game_state.entity_free_list, e.handle.index)
 	e^ = {}
 }
 entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 	// entity defaults
 	e.scale = 1
-	e.entities_colliding = make([dynamic]EntityHandle, 0, MAX_COLLIDABLE)
 
 	switch kind {
 	case .NIL:
