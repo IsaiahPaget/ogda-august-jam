@@ -158,13 +158,6 @@ draw :: proc() {
 	rl.EndDrawing()
 }
 
-draw_entity_default :: proc(e: Entity) {
-	rl.DrawTextureEx(e.texture, get_texture_position(e), e.rotation, e.scale, rl.WHITE)
-	if DEBUG {
-		rl.DrawCircleV(e.pos, 2, rl.PINK)
-		rl.DrawRectangleRec(e.collision.rectangle, rl.ColorAlpha(rl.BLUE, .50))
-	}
-}
 
 @(export)
 game_update :: proc() {

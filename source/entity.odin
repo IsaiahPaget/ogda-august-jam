@@ -35,24 +35,58 @@ Entity :: struct {
 	pos:            rl.Vector2,
 	rotation:       f32,
 	scale:          f32,
-	flip_x:         bool,
-	texture:        rl.Texture,
 	texture_offset: EntityTextureOffset,
-	// animation: Animation,
+	animation: Animation,
+}
+
+Animation :: struct {
+	kind: int,
+	texture: rl.Texture,
+	frame: struct {
+		width: int,
+		height: int,
+		duration: f32,
+	},
+	frame_count: int,
+	flip_x: bool,
+}
+
+entity_draw_default :: proc(e: Entity) {
+	destination := rl.Rectangle {
+		x = e.pos.x,
+		y = e.pos.y,
+		width = f32(e.animation.texture.width) * e.scale / f32(e.animation.frame_count),
+		height = f32(e.animation.texture.height),
+	}
+	source := rl.Rectangle {
+		x = 0,
+		y = 0,
+		width = f32(e.animation.texture.width) / f32(e.animation.frame_count),
+		height = f32(e.animation.texture.height),
+
+	}
+	rl.DrawTexturePro(e.animation.texture ,source, destination, e.rotation, e.scale, rl.WHITE)
+	if DEBUG {
+		rl.DrawCircleV(e.pos, 2, rl.PINK)
+		rl.DrawRectangleRec(e.collision.rectangle, rl.ColorAlpha(rl.BLUE, .50))
+	}
+}
+entity_animate :: proc(e: Entity) {
+		
 }
 
 get_texture_position :: proc(e: Entity) -> rl.Vector2 {
 	switch e.texture_offset {
 	case .CENTER:
-		return rl.Vector2{e.pos.x - f32(e.texture.width / 2), e.pos.y - f32(e.texture.height / 2)}
+		return rl.Vector2{e.pos.x - f32(e.animation.texture.width / 2), e.pos.y - f32(e.animation.texture.height / 2)}
 	case .TOP:
-		return rl.Vector2{e.pos.x - f32(e.texture.width / 2), e.pos.y}
+		return rl.Vector2{e.pos.x - f32(e.animation.texture.width / 2), e.pos.y}
 	case .BOTTOM:
-		return rl.Vector2{e.pos.x - f32(e.texture.width / 2), e.pos.y - f32(e.texture.height)}
+		return rl.Vector2{e.pos.x - f32(e.animation.texture.width / 2), e.pos.y - f32(e.animation.texture.height)}
 	case .LEFT:
-		return rl.Vector2{e.pos.x, e.pos.y - f32(e.texture.height / 2)}
+		return rl.Vector2{e.pos.x, e.pos.y - f32(e.animation.texture.height / 2)}
 	case .RIGHT:
-		return rl.Vector2{e.pos.x - f32(e.texture.width), e.pos.y - f32(e.texture.height / 2)}
+		return rl.Vector2{e.pos.x - f32(e.animation.texture.width), e.pos.y - f32(e.animation.texture.height / 2)}
 	case:
 		return e.pos
 	}

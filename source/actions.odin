@@ -7,11 +7,11 @@ import rl "vendor:raylib"
 player_setup :: proc(e: ^Entity) {
 	e.kind = .PLAYER
 	e.pos.x = 50
-	e.texture = rl.LoadTexture("assets/round_cat.png")
+	e.animation.texture = rl.LoadTexture("assets/cat_run.png")
 	e.texture_offset = .BOTTOM
 	e.collision.rectangle = rl.Rectangle {
-		width  = f32(e.texture.width),
-		height = f32(e.texture.height),
+		width  = f32(e.animation.texture.width),
+		height = f32(e.animation.texture.height),
 	}
 	e.collision.offset = .BOTTOM
 	e.collision.is_active = true
@@ -26,10 +26,11 @@ player_update :: proc(e: ^Entity) {
 		}
 	})
 	collision_box_update(e)
+	entity_animate(e^)
 }
 
 player_draw :: proc(e: Entity) {
-	draw_entity_default(e)
+	entity_draw_default(e)
 }
 
 /*
@@ -37,7 +38,7 @@ player_draw :: proc(e: Entity) {
 */
 cookie_setup :: proc(e: ^Entity) {
 	e.kind = .COOKIE
-	e.texture = rl.LoadTexture("assets/round_cat.png")
+	e.animation.texture = rl.LoadTexture("assets/round_cat.png")
 	e.texture_offset = .BOTTOM
 	e.collision.rectangle = rl.Rectangle {
 		width  = 10,
@@ -48,5 +49,5 @@ cookie_setup :: proc(e: ^Entity) {
 }
 
 cookie_draw :: proc(e: Entity) {
-	rl.DrawTextureEx(e.texture, get_texture_position(e), e.rotation, e.scale, rl.RED)
+	rl.DrawTextureEx(e.animation.texture, get_texture_position(e), e.rotation, e.scale, rl.RED)
 }
