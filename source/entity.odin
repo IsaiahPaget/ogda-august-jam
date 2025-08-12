@@ -20,18 +20,43 @@ EntityKind :: enum {
 	COOKIE,
 }
 
+EntityTextureOffset :: enum {
+	CENTER,
+	TOP,
+	BOTTOM,
+	LEFT,
+	RIGHT,
+}
+
 Entity :: struct {
-	handle:             EntityHandle,
-	kind:               EntityKind,
-	collision:          CollisionShape,
-	pos:                rl.Vector2,
-	rotation:           f32,
-	scale:              f32,
-	flip_x:             bool,
-	texture:            rl.Texture,
+	handle:         EntityHandle,
+	kind:           EntityKind,
+	collision:      CollisionShape,
+	pos:            rl.Vector2,
+	rotation:       f32,
+	scale:          f32,
+	flip_x:         bool,
+	texture:        rl.Texture,
+	texture_offset: EntityTextureOffset,
 	// animation: Animation,
 }
 
+get_texture_position :: proc(e: Entity) -> rl.Vector2 {
+	switch e.texture_offset {
+	case .CENTER:
+		return rl.Vector2{e.pos.x - f32(e.texture.width / 2), e.pos.y - f32(e.texture.height / 2)}
+	case .TOP:
+		return rl.Vector2{e.pos.x - f32(e.texture.width / 2), e.pos.y}
+	case .BOTTOM:
+		return rl.Vector2{e.pos.x - f32(e.texture.width / 2), e.pos.y - f32(e.texture.height)}
+	case .LEFT:
+		return rl.Vector2{e.pos.x, e.pos.y - f32(e.texture.height / 2)}
+	case .RIGHT:
+		return rl.Vector2{e.pos.x - f32(e.texture.width), e.pos.y - f32(e.texture.height / 2)}
+	case:
+		return e.pos
+	}
+}
 
 entity_is_valid :: proc {
 	entity_is_valid_no_ptr,
@@ -52,12 +77,7 @@ entity_get_all :: proc() -> []EntityHandle {
 	return game_state.scratch.all_entities
 }
 
-entity_get :: proc(
-	handle: EntityHandle,
-) -> (
-	entity: ^Entity,
-	ok: bool,
-) #optional_ok {
+entity_get :: proc(handle: EntityHandle) -> (entity: ^Entity, ok: bool) #optional_ok {
 	if handle.index <= 0 || handle.index > game_state.entity_top_count {
 		return &zero_entity, false
 	}
@@ -90,7 +110,6 @@ entity_create :: proc(kind: EntityKind) -> ^Entity {
 	ent.handle.index = index
 	ent.handle.id = game_state.latest_entity_id + 1
 	game_state.latest_entity_id = ent.handle.id
-
 	entity_setup(ent, kind)
 	fmt.assertf(ent.kind != nil, "entity %v needs to define a kind during setup", kind)
 

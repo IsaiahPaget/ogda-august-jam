@@ -38,64 +38,32 @@ DEBUG :: true
 Camera :: struct {}
 GameState :: struct {
 	// Entity
-	entity_top_count:           int,
-	latest_entity_id:           int,
-	entities:                   [MAX_ENTITIES]Entity,
-	entity_free_list:           [dynamic]int,
-	// Collision Shape
-	collision_shapes_count:     int,
-	latest_collision_shape_id:  int,
-	collision_shapes:           [MAX_COLLISION_SHAPES]CollisionShape,
-	collision_shapes_free_list: [dynamic]int,
-	// Collision Event
-	collision_events:           [MAX_COLLISION_EVENTS]CollisionEvent,
-	collision_event_count:      int,
+	entity_top_count: int,
+	latest_entity_id: int,
+	entities:         [MAX_ENTITIES]Entity,
+	entity_free_list: [dynamic]int,
 	// Stuff
-	game_camera:                Camera,
-	ui_camera:                  Camera,
-	player_handle:              EntityHandle,
-	run:                        bool,
-	scratch:                    struct {
-		all_entities:          []EntityHandle,
-		all_collisions_shapes: []CollisionShape,
-		all_collision_events:  []CollisionEvent,
+	game_camera:      Camera,
+	ui_camera:        Camera,
+	player_handle:    EntityHandle,
+	run:              bool,
+	scratch:   struct {
+		all_entities: []EntityHandle,
 	},
 }
 
 game_state: ^GameState
 
 rebuild_scratch :: proc() {
-	game_state.scratch = {} // auto-zero scratch for each update
-
 	/*
 	* Entities
 	*/
-	all_ents := make([dynamic]EntityHandle, 0, len(game_state.entities))
+	all_ents := make([dynamic]EntityHandle, 0, len(game_state.entities), context.temp_allocator)
 	for &e in game_state.entities {
 		if !entity_is_valid(e) do continue
 		append(&all_ents, e.handle)
 	}
 	game_state.scratch.all_entities = all_ents[:]
-
-	/*
-	* Collision Shapes
-	*/
-	all_shapes := make([dynamic]CollisionShape, 0, len(game_state.collision_shapes))
-	for &shape in game_state.collision_shapes {
-		if !collision_shape_is_valid(shape) do continue
-		append(&all_shapes, shape)
-	}
-	game_state.scratch.all_collisions_shapes = all_shapes[:]
-
-	/*
-	* Collision Events
-	*/
-	all_events := make([dynamic]CollisionEvent, 0, len(game_state.collision_events))
-	for &event in game_state.collision_events {
-		if event.kind == nil do continue
-		append(&all_events, event)
-	}
-	game_state.scratch.all_collision_events = all_events[:]
 }
 
 get_player :: proc() -> ^Entity {
@@ -135,14 +103,9 @@ input_dir_normalized :: proc() -> rl.Vector2 {
 }
 
 update :: proc() {
-	// reset the collision buffers
-	game_state.collision_event_count = 0
 
+	game_state.scratch = {}
 	rebuild_scratch()
-
-	for type in CollisionShapeType {
-		check_collisions_for_type(type)
-	}
 
 	// big :update time
 	for handle in entity_get_all() {
@@ -153,12 +116,6 @@ update :: proc() {
 		case .PLAYER:
 			player_update(e)
 		case .COOKIE:
-		}
-	}
-
-	if DEBUG {
-		if rl.IsKeyPressed(.E) {
-			fmt.println(game_state.scratch.all_collisions_shapes)
 		}
 	}
 
@@ -192,7 +149,9 @@ draw :: proc() {
 	// NOTE: `fmt.ctprintf` uses the temp allocator. The temp allocator is
 	// cleared at the end of the frame by the main application, meaning inside
 	// `main_hot_reload.odin`, `main_release.odin` or `main_web_entry.odin`.
-	rl.DrawText(fmt.ctprintf("player_pos: %v", get_player().pos), 5, 5, 8, rl.WHITE)
+	if DEBUG {
+		rl.DrawText(fmt.ctprintf("player_pos: %v", get_player().pos), 5, 5, 8, rl.WHITE)
+	}
 
 	rl.EndMode2D()
 
@@ -200,7 +159,11 @@ draw :: proc() {
 }
 
 draw_entity_default :: proc(e: Entity) {
-	rl.DrawTextureEx(e.texture, e.pos, e.rotation, e.scale, rl.WHITE)
+	rl.DrawTextureEx(e.texture, get_texture_position(e), e.rotation, e.scale, rl.WHITE)
+	if DEBUG {
+		rl.DrawCircleV(e.pos, 2, rl.PINK)
+		rl.DrawRectangleRec(e.collision.rectangle, rl.ColorAlpha(rl.BLUE, .50))
+	}
 }
 
 @(export)
@@ -273,7 +236,7 @@ game_hot_reloaded :: proc(mem: rawptr) {
 		game_state.player_handle = player.handle
 	}
 
-	// entity_create(.COOKIE)
+	entity_create(.COOKIE)
 	// Here you can also set your own global variables. A good idea is to make
 	// your global variables into pointers that point to something inside `g`.
 }
