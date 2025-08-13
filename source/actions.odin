@@ -28,13 +28,13 @@ player_update :: proc(e: ^Entity) {
 	}
 	e.pos += input * rl.GetFrameTime() * 100
 
+	collision_box_update(e)
 	process_collisions(e, proc(entity_b: ^Entity) {
 		#partial switch entity_b.kind {
 		case .COOKIE:
 			entity_destroy(entity_b)
 		}
 	})
-	collision_box_update(e)
 }
 
 player_draw :: proc(e: Entity) {

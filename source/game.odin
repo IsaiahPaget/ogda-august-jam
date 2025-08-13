@@ -66,7 +66,7 @@ rebuild_scratch :: proc() {
 	game_state.scratch.all_entities = all_ents[:]
 }
 
-get_player :: proc() -> ^Entity {
+get_player :: proc() -> (player: ^Entity, ok: bool) #optional_ok {
 	return entity_get(game_state.player_handle)
 }
 
@@ -74,7 +74,9 @@ game_camera :: proc() -> rl.Camera2D {
 	w := f32(rl.GetScreenWidth())
 	h := f32(rl.GetScreenHeight())
 
-	return {zoom = h / PIXEL_WINDOW_HEIGHT, target = get_player().pos, offset = {w / 2, h / 2}}
+	player, ok := get_player()
+	target := player.pos if ok else rl.Vector2(0)
+	return {zoom = h / PIXEL_WINDOW_HEIGHT, target = target, offset = {w / 2, h / 2}}
 }
 
 ui_camera :: proc() -> rl.Camera2D {
@@ -135,10 +137,7 @@ draw :: proc() {
 	rl.BeginMode2D(game_camera())
 	// big :update time
 	for handle in entity_get_all() {
-		e, ok := entity_get(handle)
-		if !ok {
-			fmt.println("not ok")
-		}
+		e := entity_get(handle)
 
 		switch e.kind {
 		case .NIL:
@@ -157,7 +156,10 @@ draw :: proc() {
 	// cleared at the end of the frame by the main application, meaning inside
 	// `main_hot_reload.odin`, `main_release.odin` or `main_web_entry.odin`.
 	if DEBUG {
-		rl.DrawText(fmt.ctprintf("player_pos: %v", get_player().pos), 5, 5, 8, rl.WHITE)
+		player, ok := get_player()
+		if ok {
+			rl.DrawText(fmt.ctprintf("player_pos: %v", player.pos), 5, 5, 8, rl.WHITE)
+		}
 	}
 
 	rl.EndMode2D()
@@ -198,12 +200,7 @@ game_init :: proc() {
 		game_state.player_handle = player.handle
 	}
 
-	cookie := entity_create(.COOKIE)
-	if cookie != nil {
-		fmt.println("handle: ", cookie.handle)
-	}
-
-
+	entity_create(.COOKIE)
 
 	game_hot_reloaded(game_state)
 }

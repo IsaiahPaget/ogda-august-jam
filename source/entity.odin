@@ -154,15 +154,12 @@ entity_get_all :: proc() -> []EntityHandle {
 }
 
 entity_get :: proc(handle: EntityHandle) -> (entity: ^Entity, ok: bool) #optional_ok {
-	fmt.println("Game state: ", game_state.entities[2])
 	if handle.index <= 0 || handle.index > game_state.entity_top_count {
 		return &zero_entity, false
 	}
 
 	ent := &game_state.entities[handle.index]
-	fmt.println("ent: ", ent)
 	if ent.handle.id != handle.id {
-		fmt.println(ent.handle.id, " ", handle.id)
 		return &zero_entity, false
 	}
 
