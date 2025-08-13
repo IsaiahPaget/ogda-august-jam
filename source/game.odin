@@ -111,11 +111,15 @@ update :: proc() {
 	for handle in entity_get_all() {
 		e := entity_get(handle)
 
+		// animation for every entity
+		entity_animate(e)
+
 		switch e.kind {
 		case .NIL:
 		case .PLAYER:
 			player_update(e)
 		case .COOKIE:
+			cookie_update(e)
 		}
 	}
 
@@ -131,7 +135,10 @@ draw :: proc() {
 	rl.BeginMode2D(game_camera())
 	// big :update time
 	for handle in entity_get_all() {
-		e := entity_get(handle)
+		e, ok := entity_get(handle)
+		if !ok {
+			fmt.println("not ok")
+		}
 
 		switch e.kind {
 		case .NIL:
@@ -185,6 +192,19 @@ game_init :: proc() {
 	game_state^ = GameState {
 		run = true,
 	}
+
+	if game_state.player_handle.id == 0 {
+		player := entity_create(.PLAYER)
+		game_state.player_handle = player.handle
+	}
+
+	cookie := entity_create(.COOKIE)
+	if cookie != nil {
+		fmt.println("handle: ", cookie.handle)
+	}
+
+
+
 	game_hot_reloaded(game_state)
 }
 
@@ -224,12 +244,6 @@ game_memory_size :: proc() -> int {
 game_hot_reloaded :: proc(mem: rawptr) {
 	game_state = (^GameState)(mem)
 
-	if game_state.player_handle.id == 0 {
-		player := entity_create(.PLAYER)
-		game_state.player_handle = player.handle
-	}
-
-	entity_create(.COOKIE)
 	// Here you can also set your own global variables. A good idea is to make
 	// your global variables into pointers that point to something inside `g`.
 }

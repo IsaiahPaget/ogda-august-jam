@@ -36,57 +36,99 @@ Entity :: struct {
 	rotation:       f32,
 	scale:          f32,
 	texture_offset: EntityTextureOffset,
-	animation: Animation,
+	animation:      Animation,
 }
 
 Animation :: struct {
-	kind: int,
-	texture: rl.Texture,
-	frame: struct {
-		width: int,
-		height: int,
-		duration: f32,
-	},
-	frame_count: int,
-	flip_x: bool,
+	kind:          AnimationType,
+	texture:       rl.Texture2D,
+	frame_count:   int,
+	frame_timer:   f32,
+	current_frame: int,
+	frame_length:  f32,
+	flip_x:        bool,
+}
+
+AnimationType :: enum {
+	IDLE,
+	RUN,
+}
+
+entity_animate :: proc(entity: ^Entity) {
+	entity.animation.frame_timer += rl.GetFrameTime()
+
+	if entity.animation.frame_timer > entity.animation.frame_length {
+		entity.animation.current_frame += 1
+		entity.animation.frame_timer = 0
+
+		if entity.animation.current_frame == entity.animation.frame_count {
+			entity.animation.current_frame = 0
+		}
+	}
+}
+
+get_source_rect :: proc(animation: Animation) -> rl.Rectangle {
+	texture_width := f32(animation.texture.width / i32(animation.frame_count))
+	texture_height := f32(animation.texture.height)
+	x := texture_width * f32(animation.current_frame)
+
+	source_rect := rl.Rectangle{x, 0, texture_width, texture_height}
+
+	return source_rect
 }
 
 entity_draw_default :: proc(e: Entity) {
+	texture := e.animation.texture
+	offset := get_texture_position(e)
 	destination := rl.Rectangle {
-		x = e.pos.x,
-		y = e.pos.y,
-		width = f32(e.animation.texture.width) * e.scale / f32(e.animation.frame_count),
-		height = f32(e.animation.texture.height),
+		x      = offset.x,
+		y      = offset.y,
+		width  = f32(texture.width) * e.scale / f32(e.animation.frame_count),
+		height = f32(texture.height),
 	}
-	source := rl.Rectangle {
-		x = 0,
-		y = 0,
-		width = f32(e.animation.texture.width) / f32(e.animation.frame_count),
-		height = f32(e.animation.texture.height),
 
+	if e.animation.flip_x {
+		texture.width *= -1
 	}
-	rl.DrawTexturePro(e.animation.texture ,source, destination, e.rotation, e.scale, rl.WHITE)
+
+	rl.DrawTexturePro(
+		texture,
+		get_source_rect(e.animation),
+		destination,
+		e.rotation,
+		e.scale,
+		rl.WHITE,
+	)
 	if DEBUG {
 		rl.DrawCircleV(e.pos, 2, rl.PINK)
 		rl.DrawRectangleRec(e.collision.rectangle, rl.ColorAlpha(rl.BLUE, .50))
 	}
 }
-entity_animate :: proc(e: Entity) {
-		
-}
 
 get_texture_position :: proc(e: Entity) -> rl.Vector2 {
+	texture_width := f32(e.animation.texture.width / i32(e.animation.frame_count))
+	texture_height := f32(e.animation.texture.height)
+
 	switch e.texture_offset {
 	case .CENTER:
-		return rl.Vector2{e.pos.x - f32(e.animation.texture.width / 2), e.pos.y - f32(e.animation.texture.height / 2)}
+		return rl.Vector2 {
+			e.pos.x - f32(texture_width / 2),
+			e.pos.y - f32(texture_height / 2),
+		}
 	case .TOP:
-		return rl.Vector2{e.pos.x - f32(e.animation.texture.width / 2), e.pos.y}
+		return rl.Vector2{e.pos.x - f32(texture_width / 2), e.pos.y}
 	case .BOTTOM:
-		return rl.Vector2{e.pos.x - f32(e.animation.texture.width / 2), e.pos.y - f32(e.animation.texture.height)}
+		return rl.Vector2 {
+			e.pos.x - f32(texture_width / 2),
+			e.pos.y - f32(texture_height),
+		}
 	case .LEFT:
-		return rl.Vector2{e.pos.x, e.pos.y - f32(e.animation.texture.height / 2)}
+		return rl.Vector2{e.pos.x, e.pos.y - f32(texture_height / 2)}
 	case .RIGHT:
-		return rl.Vector2{e.pos.x - f32(e.animation.texture.width), e.pos.y - f32(e.animation.texture.height / 2)}
+		return rl.Vector2 {
+			e.pos.x - f32(texture_width),
+			e.pos.y - f32(texture_height / 2),
+		}
 	case:
 		return e.pos
 	}
@@ -112,12 +154,15 @@ entity_get_all :: proc() -> []EntityHandle {
 }
 
 entity_get :: proc(handle: EntityHandle) -> (entity: ^Entity, ok: bool) #optional_ok {
+	fmt.println("Game state: ", game_state.entities[2])
 	if handle.index <= 0 || handle.index > game_state.entity_top_count {
 		return &zero_entity, false
 	}
 
 	ent := &game_state.entities[handle.index]
+	fmt.println("ent: ", ent)
 	if ent.handle.id != handle.id {
+		fmt.println(ent.handle.id, " ", handle.id)
 		return &zero_entity, false
 	}
 
