@@ -37,14 +37,14 @@ CollisionShape :: struct {
 	offset:    CollisionShapeOffset,
 }
 
-process_collisions :: proc(entity_a: ^Entity, cb: proc(entity_b: ^Entity)) {
+process_collisions :: proc(entity_a: ^Entity, cb: proc(e_a: ^Entity, entity_b: ^Entity)) {
 	if entity_a.collision.is_active {
 		for entity_handle in entity_get_all() {
 			ent := entity_get(entity_handle)
 			if ent.collision.is_active != true do continue
 			if ent.handle.id == entity_a.handle.id do continue
 			if rl.CheckCollisionRecs(entity_a.collision.rectangle, ent.collision.rectangle) {
-				cb(ent)
+				cb(entity_a, ent)
 			}
 		}
 	}

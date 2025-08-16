@@ -18,6 +18,7 @@ EntityKind :: enum {
 	NIL,
 	PLAYER,
 	COOKIE,
+	WALL,
 }
 
 EntityTextureOffset :: enum {
@@ -39,43 +40,6 @@ Entity :: struct {
 	animation:      Animation,
 }
 
-Animation :: struct {
-	kind:          AnimationType,
-	texture:       rl.Texture2D,
-	frame_count:   int,
-	frame_timer:   f32,
-	current_frame: int,
-	frame_length:  f32,
-	flip_x:        bool,
-}
-
-AnimationType :: enum {
-	IDLE,
-	RUN,
-}
-
-entity_animate :: proc(entity: ^Entity) {
-	entity.animation.frame_timer += rl.GetFrameTime()
-
-	if entity.animation.frame_timer > entity.animation.frame_length {
-		entity.animation.current_frame += 1
-		entity.animation.frame_timer = 0
-
-		if entity.animation.current_frame == entity.animation.frame_count {
-			entity.animation.current_frame = 0
-		}
-	}
-}
-
-get_source_rect :: proc(animation: Animation) -> rl.Rectangle {
-	texture_width := f32(animation.texture.width / i32(animation.frame_count))
-	texture_height := f32(animation.texture.height)
-	x := texture_width * f32(animation.current_frame)
-
-	source_rect := rl.Rectangle{x, 0, texture_width, texture_height}
-
-	return source_rect
-}
 
 entity_draw_default :: proc(e: Entity) {
 	texture := e.animation.texture
@@ -196,9 +160,11 @@ entity_destroy :: proc(e: ^Entity) {
 	append(&game_state.entity_free_list, e.handle.index)
 	e^ = {}
 }
+
 entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 	// entity defaults
 	e.scale = 1
+	e.kind = kind
 
 	switch kind {
 	case .NIL:
@@ -206,5 +172,7 @@ entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 		player_setup(e)
 	case .COOKIE:
 		cookie_setup(e)
+	case .WALL:
+		wall_setup(e)
 	}
 }

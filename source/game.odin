@@ -47,7 +47,7 @@ GameState :: struct {
 	ui_camera:        Camera,
 	player_handle:    EntityHandle,
 	run:              bool,
-	scratch:   struct {
+	scratch:          struct {
 		all_entities: []EntityHandle,
 	},
 }
@@ -114,7 +114,7 @@ update :: proc() {
 		e := entity_get(handle)
 
 		// animation for every entity
-		entity_animate(e)
+		animate(e)
 
 		switch e.kind {
 		case .NIL:
@@ -122,6 +122,8 @@ update :: proc() {
 			player_update(e)
 		case .COOKIE:
 			cookie_update(e)
+		case .WALL:
+			wall_update(e)
 		}
 	}
 
@@ -145,6 +147,8 @@ draw :: proc() {
 			player_draw(e^)
 		case .COOKIE:
 			cookie_draw(e^)
+		case .WALL:
+			wall_draw(e^)
 		}
 
 	}
@@ -201,6 +205,7 @@ game_init :: proc() {
 	}
 
 	entity_create(.COOKIE)
+	entity_create(.WALL)
 
 	game_hot_reloaded(game_state)
 }

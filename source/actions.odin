@@ -1,11 +1,11 @@
 package game
 import rl "vendor:raylib"
+import "core:fmt"
 
 /*
 * PLAYER
 */
 player_setup :: proc(e: ^Entity) {
-	e.kind = .PLAYER
 	e.pos.x = 50
 	e.texture_offset = .BOTTOM
 	e.collision.rectangle = rl.Rectangle {
@@ -29,12 +29,20 @@ player_update :: proc(e: ^Entity) {
 	e.pos += input * rl.GetFrameTime() * 100
 
 	collision_box_update(e)
-	process_collisions(e, proc(entity_b: ^Entity) {
+	process_collisions(e, proc(entity_a, entity_b: ^Entity) {
 		#partial switch entity_b.kind {
 		case .COOKIE:
 			entity_destroy(entity_b)
+		case .WALL:
+			player_on_collide_wall(entity_a, entity_b)		
 		}
 	})
+}
+player_on_collide_wall :: proc(player: ^Entity, wall: ^Entity) {
+	fmt.assertf(player != nil, "Player is missing in player_on_collide_wall")
+	fmt.assertf(wall != nil, "Wall is missing in player_on_collide_wall")
+	dif: rl.Vector2 = player.pos - wall.pos
+	player.pos.x += 1 if dif.x > 0 else player.pos.x
 }
 
 player_draw :: proc(e: Entity) {
@@ -66,7 +74,6 @@ init_player_run_animation :: proc() -> Animation {
 * COOKIE
 */
 cookie_setup :: proc(e: ^Entity) {
-	e.kind = .COOKIE
 
 	e.animation = init_cookie_idle_anim()
 	e.texture_offset = .BOTTOM
@@ -94,5 +101,36 @@ init_cookie_idle_anim :: proc() -> Animation {
 		current_frame = 0,
 		frame_length = 0.1,
 		kind = .IDLE,
+	}
+}
+
+/*
+* WALL
+*/
+wall_setup :: proc(e: ^Entity) {
+	e.pos.x = 100
+	e.texture_offset = .BOTTOM
+	e.animation = init_wall_anim()
+	e.collision.rectangle = rl.Rectangle {
+		width  = f32(e.animation.texture.width + 1),
+		height = f32(e.animation.texture.height + 1),
+	}
+	e.collision.offset = .BOTTOM
+	e.collision.is_active = true
+}
+
+wall_update :: proc(e: ^Entity) {
+	collision_box_update(e)
+}
+
+wall_draw :: proc(e: Entity) {
+	entity_draw_default(e)
+}
+
+init_wall_anim :: proc() -> Animation {
+	return Animation {
+		texture = rl.LoadTexture("assets/grass_block.png"),
+		frame_count = 1,
+		kind = .NIL,
 	}
 }
