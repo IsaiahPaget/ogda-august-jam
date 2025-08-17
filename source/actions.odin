@@ -28,7 +28,6 @@ player_update :: proc(e: ^Entity) {
 	}
 	e.pos += input * rl.GetFrameTime() * 100
 
-	collision_box_update(e)
 	process_collisions(e, proc(entity_a, entity_b: ^Entity) {
 		#partial switch entity_b.kind {
 		case .COOKIE:
@@ -41,8 +40,28 @@ player_update :: proc(e: ^Entity) {
 player_on_collide_wall :: proc(player: ^Entity, wall: ^Entity) {
 	fmt.assertf(player != nil, "Player is missing in player_on_collide_wall")
 	fmt.assertf(wall != nil, "Wall is missing in player_on_collide_wall")
-	dif: rl.Vector2 = player.pos - wall.pos
-	player.pos.x += 1 if dif.x > 0 else player.pos.x
+    player_rect := player.collision.rectangle
+    wall_rect := wall.collision.rectangle
+
+    overlap := get_rect_overlap(player_rect, wall_rect)
+
+    if overlap.x < overlap.y {
+        // Push along X axis
+        if player_rect.x < wall_rect.x {
+            player.pos.x -= overlap.x
+        } else {
+            player.pos.x += overlap.x
+        }
+    } else {
+        // Push along Y axis
+        if player_rect.y < wall_rect.y {
+            player.pos.y -= overlap.y
+        } else {
+            player.pos.y += overlap.y
+        }
+    }
+
+	collision_box_update(player)
 }
 
 player_draw :: proc(e: Entity) {

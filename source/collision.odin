@@ -1,6 +1,13 @@
 package game
 
+import "core:math"
 import rl "vendor:raylib"
+
+CollisionShape :: struct {
+	is_active: bool,
+	rectangle: rl.Rectangle,
+	offset:    CollisionShapeOffset,
+}
 
 CollisionShapeOffset :: enum {
 	CENTER,
@@ -31,14 +38,16 @@ collision_box_update :: proc(e: ^Entity) {
 
 }
 
-CollisionShape :: struct {
-	is_active: bool,
-	rectangle: rl.Rectangle,
-	offset:    CollisionShapeOffset,
+
+get_rect_overlap :: proc(a, b: rl.Rectangle) -> rl.Vector2 {
+    overlap_x := f32(math.min(a.x + a.width,  b.x + b.width)  - math.max(a.x, b.x))
+    overlap_y := f32(math.min(a.y + a.height, b.y + b.height) - math.max(a.y, b.y))
+    return rl.Vector2{overlap_x, overlap_y}
 }
 
 process_collisions :: proc(entity_a: ^Entity, cb: proc(e_a: ^Entity, entity_b: ^Entity)) {
 	if entity_a.collision.is_active {
+		collision_box_update(entity_a)
 		for entity_handle in entity_get_all() {
 			ent := entity_get(entity_handle)
 			if ent.collision.is_active != true do continue
