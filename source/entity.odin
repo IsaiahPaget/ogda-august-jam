@@ -98,6 +98,31 @@ get_texture_position :: proc(e: Entity) -> rl.Vector2 {
 	}
 }
 
+entity_move_and_slide :: proc(entity_a, entity_b: ^Entity) {
+    entity_a_rect := entity_a.collision.rectangle
+    entity_b_rect := entity_b.collision.rectangle
+
+    overlap := get_rect_overlap(entity_a_rect, entity_b_rect)
+
+    if overlap.x < overlap.y {
+        // Push along X axis
+        if entity_a_rect.x < entity_b_rect.x {
+            entity_a.pos.x -= overlap.x
+        } else {
+            entity_a.pos.x += overlap.x
+        }
+    } else {
+        // Push along Y axis
+        if entity_a_rect.y < entity_b_rect.y {
+            entity_a.pos.y -= overlap.y
+        } else {
+            entity_a.pos.y += overlap.y
+        }
+    }
+
+	collision_box_update(entity_a)
+}
+
 entity_is_valid :: proc {
 	entity_is_valid_no_ptr,
 	entity_is_valid_ptr,

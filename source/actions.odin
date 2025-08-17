@@ -40,28 +40,7 @@ player_update :: proc(e: ^Entity) {
 player_on_collide_wall :: proc(player: ^Entity, wall: ^Entity) {
 	fmt.assertf(player != nil, "Player is missing in player_on_collide_wall")
 	fmt.assertf(wall != nil, "Wall is missing in player_on_collide_wall")
-    player_rect := player.collision.rectangle
-    wall_rect := wall.collision.rectangle
-
-    overlap := get_rect_overlap(player_rect, wall_rect)
-
-    if overlap.x < overlap.y {
-        // Push along X axis
-        if player_rect.x < wall_rect.x {
-            player.pos.x -= overlap.x
-        } else {
-            player.pos.x += overlap.x
-        }
-    } else {
-        // Push along Y axis
-        if player_rect.y < wall_rect.y {
-            player.pos.y -= overlap.y
-        } else {
-            player.pos.y += overlap.y
-        }
-    }
-
-	collision_box_update(player)
+	entity_move_and_slide(player, wall)
 }
 
 player_draw :: proc(e: Entity) {
