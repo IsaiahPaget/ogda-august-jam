@@ -34,29 +34,27 @@ import rl "vendor:raylib"
 PIXEL_WINDOW_HEIGHT :: 180
 DEBUG :: true
 
-Camera :: struct {}
+Handle :: struct {
+	index: int,
+	// Makes trying to debug thingame_state.a bit easier if we know for a fact
+	// an entity cannot have the same ID as another one.
+	id:    int,
+}
+
 GameState :: struct {
 	// Entity
 	entity_top_count: int,
 	latest_entity_id: int,
 	entities:         [MAX_ENTITIES]Entity,
 	entity_free_list: [dynamic]int,
+	// Scenes
+	scenes:           [dynamic]Scene,
 	// Stuff
-	game_camera:      Camera,
-	ui_camera:        Camera,
 	player_handle:    Handle,
 	run:              bool,
 	scratch:          struct {
 		all_entities: []Handle,
 	},
-	current_state: GameStateKind,
-	previous_state: GameStateKind,
-}
-
-GameStateKind :: enum {
-	NIL,
-	GAME,
-	MAIN_MENU,
 }
 
 game_state: ^GameState
@@ -109,11 +107,6 @@ input_dir_normalized :: proc() -> rl.Vector2 {
 
 	input = linalg.normalize0(input)
 	return input
-}
-
-set_game_state :: proc(new_state: GameStateKind) {
-	game_state.previous_state = game_state.current_state
-	game_state.current_state = new_state
 }
 
 update :: proc() {
@@ -210,17 +203,11 @@ game_init :: proc() {
 	game_state = new(GameState)
 	game_state^ = GameState {
 		run = true,
-		current_state = .MAIN_MENU,
-		previous_state = .NIL,
 	}
 
-	if game_state.player_handle.id == 0 {
-		player := entity_create(.PLAYER)
-		game_state.player_handle = player.handle
+	if len(game_state.scenes) == 0 {
+		scene_push(.MAIN_MENU)
 	}
-
-	entity_create(.COOKIE)
-	entity_create(.WALL)
 
 	game_hot_reloaded(game_state)
 }

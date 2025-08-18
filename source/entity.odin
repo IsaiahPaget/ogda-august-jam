@@ -7,13 +7,6 @@ MAX_ENTITIES :: 2048
 
 zero_entity: Entity // #readonly for zeroing entities
 
-Handle :: struct {
-	index: int,
-	// Makes trying to debug thingame_state.a bit easier if we know for a fact
-	// an entity cannot have the same ID as another one.
-	id:    int,
-}
-
 EntityKind :: enum {
 	NIL,
 	PLAYER,
@@ -147,6 +140,12 @@ entity_get :: proc(handle: Handle) -> (entity: ^Entity, ok: bool) #optional_ok {
 	}
 
 	return ent, true
+}
+
+entity_clear_all :: proc() {
+	for ent in game_state.scratch.all_entities {
+		entity_destroy(entity_get(ent))
+	}
 }
 
 entity_create :: proc(kind: EntityKind) -> ^Entity {

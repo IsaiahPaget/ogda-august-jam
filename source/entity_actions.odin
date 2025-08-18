@@ -85,6 +85,9 @@ cookie_setup :: proc(e: ^Entity) {
 
 cookie_draw :: proc(e: Entity) {
 	entity_draw_default(e)
+	if rl.IsKeyPressed(.ENTER) {
+		scene_push(.GAME)
+	}
 }
 
 cookie_update :: proc(e: ^Entity) {
