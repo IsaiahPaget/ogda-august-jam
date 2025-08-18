@@ -34,7 +34,6 @@ import rl "vendor:raylib"
 PIXEL_WINDOW_HEIGHT :: 180
 DEBUG :: true
 
-
 Camera :: struct {}
 GameState :: struct {
 	// Entity
@@ -45,11 +44,19 @@ GameState :: struct {
 	// Stuff
 	game_camera:      Camera,
 	ui_camera:        Camera,
-	player_handle:    EntityHandle,
+	player_handle:    Handle,
 	run:              bool,
 	scratch:          struct {
-		all_entities: []EntityHandle,
+		all_entities: []Handle,
 	},
+	current_state: GameStateKind,
+	previous_state: GameStateKind,
+}
+
+GameStateKind :: enum {
+	NIL,
+	GAME,
+	MAIN_MENU,
 }
 
 game_state: ^GameState
@@ -58,7 +65,7 @@ rebuild_scratch :: proc() {
 	/*
 	* Entities
 	*/
-	all_ents := make([dynamic]EntityHandle, 0, len(game_state.entities), context.temp_allocator)
+	all_ents := make([dynamic]Handle, 0, len(game_state.entities), context.temp_allocator)
 	for &e in game_state.entities {
 		if !entity_is_valid(e) do continue
 		append(&all_ents, e.handle)
@@ -104,6 +111,11 @@ input_dir_normalized :: proc() -> rl.Vector2 {
 	return input
 }
 
+set_game_state :: proc(new_state: GameStateKind) {
+	game_state.previous_state = game_state.current_state
+	game_state.current_state = new_state
+}
+
 update :: proc() {
 
 	game_state.scratch = {}
@@ -140,6 +152,7 @@ draw :: proc() {
 	// big :update time
 	for handle in entity_get_all() {
 		e := entity_get(handle)
+		if e.hidden do continue
 
 		switch e.kind {
 		case .NIL:
@@ -197,6 +210,8 @@ game_init :: proc() {
 	game_state = new(GameState)
 	game_state^ = GameState {
 		run = true,
+		current_state = .MAIN_MENU,
+		previous_state = .NIL,
 	}
 
 	if game_state.player_handle.id == 0 {

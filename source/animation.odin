@@ -3,7 +3,7 @@ package game
 import "core:fmt"
 import rl "vendor:raylib"
 Animation :: struct {
-	kind:          AnimationType,
+	kind:          AnimationHandle,
 	texture:       rl.Texture2D,
 	frame_count:   int,
 	frame_timer:   f32,
@@ -12,7 +12,7 @@ Animation :: struct {
 	flip_x:        bool,
 }
 
-AnimationType :: enum {
+AnimationHandle :: enum {
 	NIL,
 	IDLE,
 	RUN,

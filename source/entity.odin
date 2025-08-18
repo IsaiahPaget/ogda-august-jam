@@ -7,7 +7,7 @@ MAX_ENTITIES :: 2048
 
 zero_entity: Entity // #readonly for zeroing entities
 
-EntityHandle :: struct {
+Handle :: struct {
 	index: int,
 	// Makes trying to debug thingame_state.a bit easier if we know for a fact
 	// an entity cannot have the same ID as another one.
@@ -30,7 +30,7 @@ EntityTextureOffset :: enum {
 }
 
 Entity :: struct {
-	handle:         EntityHandle,
+	handle:         Handle,
 	kind:           EntityKind,
 	collision:      CollisionShape,
 	pos:            rl.Vector2,
@@ -38,6 +38,9 @@ Entity :: struct {
 	scale:          f32,
 	texture_offset: EntityTextureOffset,
 	animation:      Animation,
+	hidden:         bool,
+	lifespan_ms:    int,
+	created_on:     f64,
 }
 
 
@@ -75,50 +78,41 @@ get_texture_position :: proc(e: Entity) -> rl.Vector2 {
 
 	switch e.texture_offset {
 	case .CENTER:
-		return rl.Vector2 {
-			e.pos.x - f32(texture_width / 2),
-			e.pos.y - f32(texture_height / 2),
-		}
+		return rl.Vector2{e.pos.x - f32(texture_width / 2), e.pos.y - f32(texture_height / 2)}
 	case .TOP:
 		return rl.Vector2{e.pos.x - f32(texture_width / 2), e.pos.y}
 	case .BOTTOM:
-		return rl.Vector2 {
-			e.pos.x - f32(texture_width / 2),
-			e.pos.y - f32(texture_height),
-		}
+		return rl.Vector2{e.pos.x - f32(texture_width / 2), e.pos.y - f32(texture_height)}
 	case .LEFT:
 		return rl.Vector2{e.pos.x, e.pos.y - f32(texture_height / 2)}
 	case .RIGHT:
-		return rl.Vector2 {
-			e.pos.x - f32(texture_width),
-			e.pos.y - f32(texture_height / 2),
-		}
+		return rl.Vector2{e.pos.x - f32(texture_width), e.pos.y - f32(texture_height / 2)}
 	case:
 		return e.pos
 	}
 }
 
 entity_move_and_slide :: proc(entity_a, entity_b: ^Entity) {
-    entity_a_rect := entity_a.collision.rectangle
-    entity_b_rect := entity_b.collision.rectangle
+	entity_a_rect := entity_a.collision.rectangle
+	entity_b_rect := entity_b.collision.rectangle
 
-    overlap := get_rect_overlap(entity_a_rect, entity_b_rect)
+	overlap := get_rect_overlap(entity_a_rect, entity_b_rect)
 
-    if overlap.x < overlap.y {
-        // Push along X axis
-        if entity_a_rect.x < entity_b_rect.x {
-            entity_a.pos.x -= overlap.x
-        } else {
-            entity_a.pos.x += overlap.x
-        }
-    } else {
-        // Push along Y axis
-        if entity_a_rect.y < entity_b_rect.y {
-            entity_a.pos.y -= overlap.y
-        } else {
-            entity_a.pos.y += overlap.y
-        }
-    }
+	if overlap.x < overlap.y {
+		// Push along X axis
+		if entity_a_rect.x < entity_b_rect.x {
+			entity_a.pos.x -= overlap.x
+		} else {
+			entity_a.pos.x += overlap.x
+		}
+	} else {
+		// Push along Y axis
+		if entity_a_rect.y < entity_b_rect.y {
+			entity_a.pos.y -= overlap.y
+		} else {
+			entity_a.pos.y += overlap.y
+		}
+	}
 
 	collision_box_update(entity_a)
 }
@@ -138,11 +132,11 @@ entity_init_core :: proc() {
 	entity_setup(&zero_entity, .NIL)
 }
 
-entity_get_all :: proc() -> []EntityHandle {
+entity_get_all :: proc() -> []Handle {
 	return game_state.scratch.all_entities
 }
 
-entity_get :: proc(handle: EntityHandle) -> (entity: ^Entity, ok: bool) #optional_ok {
+entity_get :: proc(handle: Handle) -> (entity: ^Entity, ok: bool) #optional_ok {
 	if handle.index <= 0 || handle.index > game_state.entity_top_count {
 		return &zero_entity, false
 	}
@@ -190,6 +184,7 @@ entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 	// entity defaults
 	e.scale = 1
 	e.kind = kind
+	e.created_on = rl.GetTime()
 
 	switch kind {
 	case .NIL:
