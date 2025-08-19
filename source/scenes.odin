@@ -18,9 +18,19 @@ scene_push :: proc(kind: SceneKind) -> ^Scene {
 		len(game_state.scenes) <= MAX_SCENES,
 		"too many scenes on the stack, increase the size",
 	)
+	if len(game_state.scenes) > 0 {
+		current_scene := &game_state.scenes[len(game_state.scenes) - 1]
+		switch current_scene.kind {
+		case .GAME:
+			game_transition(current_scene)
+		case .MAIN_MENU:
+			main_menu_transition(current_scene)
+		}
+	}
+
 	scene: Scene
 	_, err := append(&game_state.scenes, scene)
-	fmt.assertf(err == .None,"error: ", err)
+	fmt.assertf(err == .None, "error: ", err)
 
 	index := len(game_state.scenes) - 1
 

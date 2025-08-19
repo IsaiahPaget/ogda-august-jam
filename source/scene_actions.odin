@@ -7,6 +7,9 @@ main_menu_setup :: proc(scene: ^Scene) {
 	entity_create(.COOKIE)
 }
 
+main_menu_transition :: proc(scene: ^Scene) {
+}
+
 main_menu_destroy :: proc(dead_scene: Scene) {
 	entity_clear_all()
 }
@@ -17,6 +20,9 @@ main_menu_destroy :: proc(dead_scene: Scene) {
 game_setup :: proc(scene: ^Scene) {
 	entity_clear_all()
 	entity_create(.PLAYER)	
+}
+
+game_transition :: proc(scene: ^Scene) {
 }
 
 game_destroy :: proc(dead_scene: Scene) {

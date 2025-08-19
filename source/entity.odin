@@ -47,13 +47,15 @@ entity_draw_default :: proc(e: Entity) {
 		height = f32(texture.height),
 	}
 
+	src := get_source_rect(e.animation)
 	if e.animation.flip_x {
-		texture.width *= -1
+		src.width = -src.width
+		src.x += -src.width
 	}
 
 	rl.DrawTexturePro(
 		texture,
-		get_source_rect(e.animation),
+		src,
 		destination,
 		e.rotation,
 		e.scale,
