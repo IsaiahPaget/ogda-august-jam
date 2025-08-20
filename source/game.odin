@@ -36,18 +36,6 @@ DEBUG :: true
 SCREEN_WIDTH :: 1280
 SCREEN_HEIGHT :: 720
 // GLSL_VERSION :: 330
-// // Shader management functions
-// // NOTE: Shader functionality is not available on OpenGL 1.1
-// Shader LoadShader(const char *vsFileName, const char *fsFileName);   // Load shader from files and bind default locations
-// Shader LoadShaderFromMemory(const char *vsCode, const char *fsCode); // Load shader from code strings and bind default locations
-// bool IsShaderValid(Shader shader);                                   // Check if a shader is valid (loaded on GPU)
-// int GetShaderLocation(Shader shader, const char *uniformName);       // Get shader uniform location
-// int GetShaderLocationAttrib(Shader shader, const char *attribName);  // Get shader attribute location
-// void SetShaderValue(Shader shader, int locIndex, const void *value, int uniformType);               // Set shader uniform value
-// void SetShaderValueV(Shader shader, int locIndex, const void *value, int uniformType, int count);   // Set shader uniform value vector
-// void SetShaderValueMatrix(Shader shader, int locIndex, Matrix mat);         // Set shader uniform value (matrix 4x4)
-// void SetShaderValueTexture(Shader shader, int locIndex, Texture2D texture); // Set shader uniform value for texture (sampler2d)
-// void UnloadShader(Shader shader);  
 
 Handle :: struct {
 	index: int,
@@ -66,8 +54,6 @@ GameState :: struct {
 	scenes:           [dynamic]Scene,
 	// Stuff
 	player_handle:    Handle,
-	shader:           rl.Shader,
-	render_texture:   rl.RenderTexture2D,
 	run:              bool,
 	scratch:          struct {
 		all_entities: []Handle,
@@ -155,51 +141,42 @@ update :: proc() {
 }
 
 draw :: proc() {
-	rl.BeginTextureMode(game_state.render_texture)
-		rl.ClearBackground(rl.WHITE)
-			rl.BeginMode2D(game_camera())
-				// big :update time
-				for handle in entity_get_all() {
-					e := entity_get(handle)
-					if e.hidden do continue
 
-					switch e.kind {
-					case .NIL:
-					case .PLAYER:
-						player_draw(e^)
-					case .COOKIE:
-						cookie_draw(e^)
-					case .WALL:
-						wall_draw(e^)
-					}
-
-				}
-			rl.EndMode2D()
-			rl.BeginMode2D(ui_camera())
-				// NOTE: `fmt.ctprintf` uses the temp allocator. The temp allocator is
-				// cleared at the end of the frame by the main application, meaning inside
-				// `main_hot_reload.odin`, `main_release.odin` or `main_web_entry.odin`.
-				if DEBUG {
-					player, ok := get_player()
-					if ok {
-						rl.DrawText(fmt.ctprintf("player_pos: %v", player.pos), 5, 5, 8, rl.WHITE)
-					}
-				}
-
-		rl.EndMode2D()
-	rl.EndTextureMode()
-
+	// draw to the window
 	rl.BeginDrawing()
-		rl.ClearBackground(rl.WHITE)
+	rl.ClearBackground(rl.GRAY)
 
-		rl.BeginShaderMode(game_state.shader)
-			rl.DrawTextureRec(
-				game_state.render_texture.texture,
-				rl.Rectangle{0, 0, f32(game_state.render_texture.texture.width), -f32(game_state.render_texture.texture.height)},
-				rl.Vector2{0, 0},
-				rl.WHITE,
-			)
-		rl.EndShaderMode()
+	rl.BeginMode2D(game_camera())
+	// big :update time
+	for handle in entity_get_all() {
+		e := entity_get(handle)
+		if e.hidden do continue
+
+		switch e.kind {
+		case .NIL:
+		case .PLAYER:
+			player_draw(e^)
+		case .COOKIE:
+			cookie_draw(e^)
+		case .WALL:
+			wall_draw(e^)
+		}
+	}
+
+	rl.EndMode2D()
+	// This is the ui that will not be effected by the shader
+	rl.BeginMode2D(ui_camera())
+	// NOTE: `fmt.ctprintf` uses the temp allocator. The temp allocator is
+	// cleared at the end of the frame by the main application, meaning inside
+	// `main_hot_reload.odin`, `main_release.odin` or `main_web_entry.odin`.
+	if DEBUG {
+		player, ok := get_player()
+		if ok {
+			rl.DrawText(fmt.ctprintf("player_pos: %v", player.pos), 5, 5, 8, rl.WHITE)
+		}
+	}
+	rl.EndMode2D()
+
 	rl.EndDrawing()
 }
 
@@ -215,7 +192,7 @@ game_update :: proc() {
 
 @(export)
 game_init_window :: proc() {
-	rl.SetConfigFlags({.WINDOW_RESIZABLE, .VSYNC_HINT})
+	rl.SetConfigFlags({.WINDOW_RESIZABLE, .VSYNC_HINT, .MSAA_4X_HINT})
 	rl.InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "ogda august rl")
 	rl.SetWindowPosition(200, 200)
 	rl.SetTargetFPS(144)
@@ -229,11 +206,8 @@ game_init :: proc() {
 	entity_init_core() // Initialize the safe default entity
 	game_state = new(GameState)
 	game_state^ = GameState {
-		run    = true,
-		shader = rl.LoadShader(nil, "./shaders/grayscale.fs"),
-		render_texture = rl.LoadRenderTexture(SCREEN_WIDTH, SCREEN_HEIGHT),
+		run            = true,
 	}
-	fmt.assertf(rl.IsShaderValid(game_state.shader), "Shader invalid")
 
 	if len(game_state.scenes) == 0 {
 		scene_push(.MAIN_MENU)
@@ -256,7 +230,6 @@ game_should_run :: proc() -> bool {
 
 @(export)
 game_shutdown :: proc() {
-	rl.UnloadShader(game_state.shader)
 	delete(game_state.scenes) // free the scenes array
 	delete(game_state.entity_free_list) // free the entity freelist
 	free(game_state)
