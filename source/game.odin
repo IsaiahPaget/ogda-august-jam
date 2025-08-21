@@ -29,6 +29,7 @@ package game
 
 import "core:fmt"
 import "core:math/linalg"
+import cm "../chipmonk"
 import rl "vendor:raylib"
 
 PIXEL_WINDOW_HEIGHT :: 180
@@ -206,12 +207,15 @@ game_init :: proc() {
 	entity_init_core() // Initialize the safe default entity
 	game_state = new(GameState)
 	game_state^ = GameState {
-		run            = true,
+		run = true,
 	}
 
 	if len(game_state.scenes) == 0 {
 		scene_push(.MAIN_MENU)
 	}
+
+	space := cm.cpSpaceNew()
+	defer cm.cpSpaceFree(space)
 
 	game_hot_reloaded(game_state)
 }
