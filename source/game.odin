@@ -29,7 +29,7 @@ package game
 
 import "core:fmt"
 import "core:math/linalg"
-import cm "../chipmonk"
+import box "vendor:box2d"
 import rl "vendor:raylib"
 
 PIXEL_WINDOW_HEIGHT :: 180
@@ -53,6 +53,8 @@ GameState :: struct {
 	entity_free_list: [dynamic]int,
 	// Scenes
 	scenes:           [dynamic]Scene,
+	// physics
+	world_id:         box.WorldId,
 	// Stuff
 	player_handle:    Handle,
 	run:              bool,
@@ -117,6 +119,8 @@ update :: proc() {
 
 	game_state.scratch = {}
 	rebuild_scratch()
+
+	box.World_Step(game_state.world_id, f32(rl.GetTime()), 4)
 
 	// big :update time
 	for handle in entity_get_all() {
@@ -210,12 +214,14 @@ game_init :: proc() {
 		run = true,
 	}
 
+	//physics
+	world_def := box.DefaultWorldDef()
+	world_def.gravity = box.Vec2{0.0, 0.5}
+	game_state.world_id = box.CreateWorld(world_def)
+
 	if len(game_state.scenes) == 0 {
 		scene_push(.MAIN_MENU)
 	}
-
-	space := cm.cpSpaceNew()
-	defer cm.cpSpaceFree(space)
 
 	game_hot_reloaded(game_state)
 }

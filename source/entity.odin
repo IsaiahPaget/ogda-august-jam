@@ -1,6 +1,7 @@
 package game
 
 import "core:fmt"
+import box "vendor:box2d"
 import rl "vendor:raylib"
 
 MAX_ENTITIES :: 2048
@@ -27,10 +28,14 @@ Entity :: struct {
 	kind:           EntityKind,
 	collision:      CollisionShape,
 	pos:            rl.Vector2,
-	rotation:       f32,
+	rotation:       box.Rot,
 	scale:          f32,
 	texture_offset: EntityTextureOffset,
 	animation:      Animation,
+	has_physics:    bool,
+	body_id:        box.BodyId,
+	polygon:        box.Polygon,
+	shape_id:       box.ShapeId,
 	hidden:         bool,
 	lifespan_ms:    int,
 	created_on:     f64,
@@ -53,14 +58,7 @@ entity_draw_default :: proc(e: Entity) {
 		src.x += -src.width
 	}
 
-	rl.DrawTexturePro(
-		texture,
-		src,
-		destination,
-		e.rotation,
-		e.scale,
-		rl.WHITE,
-	)
+	rl.DrawTexturePro(texture, src, destination, e.rotation.c, e.scale, rl.WHITE)
 	if DEBUG {
 		rl.DrawCircleV(e.pos, 2, rl.PINK)
 		rl.DrawRectangleRec(e.collision.rectangle, rl.ColorAlpha(rl.BLUE, .50))

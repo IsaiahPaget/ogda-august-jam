@@ -1,5 +1,6 @@
 package game
 import rl "vendor:raylib"
+import box "vendor:box2d"
 import "core:fmt"
 
 /*
@@ -81,6 +82,23 @@ cookie_setup :: proc(e: ^Entity) {
 	}
 	e.collision.offset = .BOTTOM
 	e.collision.is_active = true
+
+	/*
+	* physics
+	*/
+	e.has_physics = true
+	body_def := box.DefaultBodyDef()
+	body_def.type = .dynamicBody
+	body_def.position = rl.Vector2 {
+		e.pos.x,
+		e.pos.y,
+	}
+	e.body_id = box.CreateBody(game_state.world_id, body_def)
+	e.polygon = box.MakeBox(1,1)
+	shape_def := box.DefaultShapeDef()
+	shape_def.density = 1
+	shape_def.material.friction = 0.3
+	e.shape_id = box.CreatePolygonShape(e.body_id, shape_def, e.polygon)
 }
 
 cookie_draw :: proc(e: Entity) {
@@ -92,6 +110,8 @@ cookie_draw :: proc(e: Entity) {
 
 cookie_update :: proc(e: ^Entity) {
 	collision_box_update(e)
+	e.pos = box.Body_GetPosition(e.body_id)
+	e.rotation = box.Body_GetRotation(e.body_id)
 }
 
 init_cookie_idle_anim :: proc() -> Animation {
