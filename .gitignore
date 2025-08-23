@@ -5,3 +5,6 @@ game_hot_reload.bin
 game_hot_reload.bin.DSYM
 raylib.dll
 linux/**
+
+# Visual Studio cache directory
+.vs/
