@@ -1,10 +1,11 @@
 package game
 
 /*
-* Main Menu
+* MAIN MENU
 */
 main_menu_setup :: proc(scene: ^Scene) {
-	entity_create(.COOKIE)
+	entity_clear_all()
+	entity_create(.PLAY_BUTTON)
 }
 
 main_menu_transition :: proc(scene: ^Scene) {
@@ -15,12 +16,14 @@ main_menu_destroy :: proc(dead_scene: Scene) {
 }
 
 /*
-* Game
+* GAME
 */
 game_setup :: proc(scene: ^Scene) {
 	entity_clear_all()
-	player := entity_create(.PLAYER)	
+	player := entity_create(.PLAYER)
 	game_state.player_handle = player.handle
+	entity_create(.GROUND)
+	entity_create(.CRAB_SPAWNER)
 }
 
 game_transition :: proc(scene: ^Scene) {
