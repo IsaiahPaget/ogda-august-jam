@@ -12,6 +12,8 @@ EntityKind :: enum {
 	PLAYER,
 	CRAB,
 	GROUND,
+	FOREGROUND,
+	BACKGROUND,
 	PLAY_BUTTON,
 	CRAB_SPAWNER,
 }
@@ -25,24 +27,25 @@ EntityTextureOffset :: enum {
 }
 
 Entity :: struct {
-	handle:           Handle,
-	kind:             EntityKind,
-	collision:        CollisionShape,
-	pos:              rl.Vector2,
-	velocity:         rl.Vector2,
-	rotation:         f32,
-	scale:            f32,
-	has_physics:      bool,
-	texture_offset:   EntityTextureOffset,
-	animation:        Animation,
-	hidden:           bool,
-	lifespan_s:      f64,
-	is_on_ground:     bool,
-	created_on:       f64,
+	handle:             Handle,
+	kind:               EntityKind,
+	collision:          CollisionShape,
+	pos:                rl.Vector2,
+	velocity:           rl.Vector2,
+	rotation:           f32,
+	scale:              f32,
+	has_physics:        bool,
+	texture_offset:     EntityTextureOffset,
+	animation:          Animation,
+	hidden:             bool,
+	lifespan_s:         f64,
+	is_on_ground:       bool,
+	created_on:         f64,
 
 	// SPAWNER
 	last_spawn_s:       f64, // since game init
 	spawner_interval_s: f64,
+
 }
 
 
@@ -201,5 +204,9 @@ entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 		play_button_setup(e)
 	case .CRAB_SPAWNER:
 		crab_spawner_setup(e)
+	case .FOREGROUND:
+		foreground_setup(e)
+	case .BACKGROUND:
+		background_setup(e)
 	}
 }
