@@ -144,7 +144,7 @@ draw :: proc() {
 
 	// draw to the window
 	rl.BeginDrawing()
-	rl.ClearBackground(rl.GRAY)
+	rl.ClearBackground(rl.RED)
 
 	rl.BeginMode2D(game_camera())
 	// big :update time
