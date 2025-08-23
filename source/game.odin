@@ -117,6 +117,8 @@ update :: proc() {
 	game_state.scratch = {}
 	rebuild_scratch()
 
+	fmt.println(len(game_state.scratch.all_entities))
+
 	// big :update time
 	for handle in entity_get_all() {
 		e := entity_get(handle)

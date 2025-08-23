@@ -90,7 +90,7 @@ init_player_run_animation :: proc() -> Animation {
 crab_spawner_setup :: proc(e: ^Entity) {
 
 	e.pos = rl.Vector2{100, 0}
-	e.spawner_interval_s = 10
+	e.spawner_interval_s = 3
 	if DEBUG {
 		fmt.println("setting up crab spawner") // TODO: delete this line later
 	}
@@ -118,16 +118,17 @@ crab_spawner_draw :: proc(e: Entity) {
 * CRAB
 */
 crab_setup :: proc(e: ^Entity) {
-	e.animation = init_crab_idle_anim()
+	e.animation = init_crab_run_anim()
 	e.lifespan_s = 10
 	e.texture_offset = .CENTER
 	e.collision.rectangle = rl.Rectangle {
-		width  = 10,
-		height = 10,
+		width  = f32(e.animation.texture.width + 1) / f32(e.animation.frame_count),
+		height = f32(e.animation.texture.height + 1),
 	}
 	e.collision.offset = .CENTER
 	e.collision.is_active = true
 	e.has_physics = true
+	e.scale = 1
 }
 
 crab_draw :: proc(e: Entity) {
@@ -135,7 +136,7 @@ crab_draw :: proc(e: Entity) {
 }
 
 crab_update :: proc(e: ^Entity) {
-	
+
 	MOVE_SPEED :: -100
 
 	if rl.GetTime() - e.created_on >= e.lifespan_s {
@@ -143,7 +144,7 @@ crab_update :: proc(e: ^Entity) {
 	}
 
 	if e.has_physics {
-		if ! e.is_on_ground {
+		if !e.is_on_ground {
 			e.velocity.y += get_applied_gravity()
 		}
 	}
@@ -170,14 +171,14 @@ crab_on_collide_ground :: proc(crab, ground: ^Entity) {
 	entity_move_and_slide(crab, ground)
 }
 
-init_crab_idle_anim :: proc() -> Animation {
+init_crab_run_anim :: proc() -> Animation {
 	return Animation {
-		texture = rl.LoadTexture("assets/round_cat.png"),
-		frame_count = 1,
+		texture = rl.LoadTexture("assets/crab/crab_run.png"),
+		frame_count = 3,
 		frame_timer = 0,
 		current_frame = 0,
 		frame_length = 0.1,
-		kind = .IDLE,
+		kind = .RUN,
 	}
 }
 
