@@ -25,26 +25,25 @@ EntityTextureOffset :: enum {
 }
 
 Entity :: struct {
-	handle:           Handle,
-	kind:             EntityKind,
-	collision:        CollisionShape,
-	pos:              rl.Vector2,
-	velocity:         rl.Vector2,
-	rotation:         f32,
-	scale:            f32,
-	has_physics:      bool,
-	texture_offset:   EntityTextureOffset,
-	animation:        Animation,
-	hidden:           bool,
-	lifespan_s:      f64,
-	is_on_ground:     bool,
-	created_on:       f64,
+	handle:             Handle,
+	kind:               EntityKind,
+	collision:          CollisionShape,
+	pos:                rl.Vector2,
+	velocity:           rl.Vector2,
+	rotation:           f32,
+	scale:              f32,
+	has_physics:        bool,
+	texture_offset:     EntityTextureOffset,
+	animation:          Animation,
+	hidden:             bool,
+	lifespan_s:         f64,
+	is_on_ground:       bool,
+	created_on:         f64,
 
 	// SPAWNER
 	last_spawn_s:       f64, // since game init
 	spawner_interval_s: f64,
 
-	//
 }
 
 

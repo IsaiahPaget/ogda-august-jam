@@ -188,6 +188,7 @@ init_crab_run_anim :: proc() -> Animation {
 */
 ground_setup :: proc(e: ^Entity) {
 	e.pos.y = 75
+	e.pos.x = -50
 	e.texture_offset = .CENTER
 	e.animation = init_ground_anim()
 	e.collision.rectangle = rl.Rectangle {
@@ -202,11 +203,23 @@ ground_setup :: proc(e: ^Entity) {
 
 ground_update :: proc(e: ^Entity) {
 	MOVE_SPEED :: -100
-	e.velocity = rl.Vector2{MOVE_SPEED, 0}
-	e.pos += e.velocity * rl.GetFrameTime()
-	if e.pos.x < -200 {
-		e.pos.x = 0
-	}
+    e.velocity = rl.Vector2{MOVE_SPEED, 0}
+    e.pos += e.velocity * rl.GetFrameTime()
+
+    if e.pos.x < -f32(e.animation.texture.width) -50 {
+        // Instead of resetting to .initial_position,
+        // move this ground tile just after the rightmost one
+        rightmost_x: f32 = -999999
+        for handle in entity_get_all() {
+            g := entity_get(handle)
+            if g.kind == .GROUND && g != e {
+                if g.pos.x > rightmost_x {
+                    rightmost_x = g.pos.x - 1
+                }
+            }
+        }
+        e.pos.x = rightmost_x + f32(e.animation.texture.width)
+    }
 	collision_box_update(e)
 }
 

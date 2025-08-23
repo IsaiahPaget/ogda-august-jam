@@ -55,7 +55,6 @@ GameState :: struct {
 	scenes:            [dynamic]Scene,
 	// Stuff
 	player_handle:     Handle,
-	screen_is_shaking: bool,
 	run:               bool,
 	scratch:           struct {
 		all_entities: []Handle,

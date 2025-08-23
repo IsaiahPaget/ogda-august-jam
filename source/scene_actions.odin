@@ -22,7 +22,17 @@ game_setup :: proc(scene: ^Scene) {
 	entity_clear_all()
 	player := entity_create(.PLAYER)
 	game_state.player_handle = player.handle
-	entity_create(.GROUND)
+
+	// floor setup
+	ground_1 := entity_create(.GROUND)
+	ground_text_width := f32(ground_1.animation.texture.width)
+	ground_2 := entity_create(.GROUND)
+	ground_2.pos.x += ground_text_width
+	ground_3 := entity_create(.GROUND)
+	ground_3.pos.x += ground_2.pos.x + ground_text_width
+	ground_4 := entity_create(.GROUND)
+	ground_4.pos.x += ground_3.pos.x + ground_text_width
+
 	entity_create(.CRAB_SPAWNER)
 }
 
