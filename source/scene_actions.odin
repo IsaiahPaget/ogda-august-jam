@@ -5,6 +5,7 @@ package game
 */
 main_menu_setup :: proc(scene: ^Scene) {
 	entity_create(.COOKIE)
+	entity_create(.WALL)
 }
 
 main_menu_transition :: proc(scene: ^Scene) {

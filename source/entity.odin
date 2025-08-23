@@ -1,9 +1,11 @@
 package game
 
 import "core:fmt"
+import box "vendor:box2d"
 import rl "vendor:raylib"
 
 MAX_ENTITIES :: 2048
+RAD2DEG :: 180 / 3.1415927
 
 zero_entity: Entity // #readonly for zeroing entities
 
@@ -25,7 +27,15 @@ EntityTextureOffset :: enum {
 Entity :: struct {
 	handle:         Handle,
 	kind:           EntityKind,
-	collision:      CollisionShape,
+
+	// collision
+	has_collision:  bool,
+	body_id:        box.BodyId,
+	offset:         CollisionShapeOffset,
+	body_rectangle: rl.Rectangle,
+	body_shape_id:  box.ShapeId,
+	body_extent:    box.Vec2,
+	body_polygon:   box.Polygon,
 	pos:            rl.Vector2,
 	rotation:       f32,
 	scale:          f32,
@@ -53,17 +63,10 @@ entity_draw_default :: proc(e: Entity) {
 		src.x += -src.width
 	}
 
-	rl.DrawTexturePro(
-		texture,
-		src,
-		destination,
-		e.rotation,
-		e.scale,
-		rl.WHITE,
-	)
+	rl.DrawTexturePro(texture, src, destination, RAD2DEG * e.rotation, e.scale, rl.WHITE)
 	if DEBUG {
 		rl.DrawCircleV(e.pos, 2, rl.PINK)
-		rl.DrawRectangleRec(e.collision.rectangle, rl.ColorAlpha(rl.BLUE, .50))
+		rl.DrawRectangleRec(e.body_rectangle, rl.ColorAlpha(rl.BLUE, .50))
 	}
 }
 
@@ -88,8 +91,8 @@ get_texture_position :: proc(e: Entity) -> rl.Vector2 {
 }
 
 entity_move_and_slide :: proc(entity_a, entity_b: ^Entity) {
-	entity_a_rect := entity_a.collision.rectangle
-	entity_b_rect := entity_b.collision.rectangle
+	entity_a_rect := entity_a.body_rectangle
+	entity_b_rect := entity_b.body_rectangle
 
 	overlap := get_rect_overlap(entity_a_rect, entity_b_rect)
 

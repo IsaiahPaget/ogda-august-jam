@@ -29,12 +29,14 @@ package game
 
 import "core:fmt"
 import "core:math/linalg"
+import box "vendor:box2d"
 import rl "vendor:raylib"
 
 PIXEL_WINDOW_HEIGHT :: 180
 DEBUG :: true
 SCREEN_WIDTH :: 1280
 SCREEN_HEIGHT :: 720
+WORLD_SUB_STEP_COUNT :: 4
 // GLSL_VERSION :: 330
 
 Handle :: struct {
@@ -52,9 +54,12 @@ GameState :: struct {
 	entity_free_list: [dynamic]int,
 	// Scenes
 	scenes:           [dynamic]Scene,
+	// phys
+	world_id:         box.WorldId,
 	// Stuff
 	player_handle:    Handle,
-	run:              bool,
+	run:              bool, // run is for if the game is actually running like if the window should be open
+	paused:           bool, // pause is for pausing
 	scratch:          struct {
 		all_entities: []Handle,
 	},
@@ -116,6 +121,8 @@ update :: proc() {
 
 	game_state.scratch = {}
 	rebuild_scratch()
+
+	box.World_Step(game_state.world_id, rl.GetFrameTime(), WORLD_SUB_STEP_COUNT)
 
 	// big :update time
 	for handle in entity_get_all() {
@@ -206,8 +213,15 @@ game_init :: proc() {
 	entity_init_core() // Initialize the safe default entity
 	game_state = new(GameState)
 	game_state^ = GameState {
-		run            = true,
+		run = true,
 	}
+
+	// 64 pixels per meter is a appropriate for this scene.
+	lengthUnitsPerMeter: f32 = 64.0
+	box.SetLengthUnitsPerMeter(lengthUnitsPerMeter)
+	world_def := box.DefaultWorldDef()
+	world_def.gravity = box.Vec2{0, 9.8 * lengthUnitsPerMeter}
+	game_state.world_id = box.CreateWorld(world_def)
 
 	if len(game_state.scenes) == 0 {
 		scene_push(.MAIN_MENU)
@@ -230,6 +244,7 @@ game_should_run :: proc() -> bool {
 
 @(export)
 game_shutdown :: proc() {
+	box.DestroyWorld(game_state.world_id)
 	delete(game_state.scenes) // free the scenes array
 	delete(game_state.entity_free_list) // free the entity freelist
 	free(game_state)

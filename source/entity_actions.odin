@@ -1,19 +1,20 @@
 package game
-import rl "vendor:raylib"
 import "core:fmt"
+import box "vendor:box2d"
+import rl "vendor:raylib"
 
 /*
 * PLAYER
 */
 player_setup :: proc(e: ^Entity) {
 	e.pos.x = 50
-	e.texture_offset = .BOTTOM
-	e.collision.rectangle = rl.Rectangle {
+	e.texture_offset = .CENTER
+	e.body_rectangle = rl.Rectangle {
 		width  = 15,
 		height = 15,
 	}
-	e.collision.offset = .BOTTOM
-	e.collision.is_active = true
+	e.offset = .CENTER
+	e.has_collision = true
 	e.animation = init_player_run_animation()
 }
 
@@ -33,7 +34,7 @@ player_update :: proc(e: ^Entity) {
 		case .COOKIE:
 			entity_destroy(entity_b)
 		case .WALL:
-			player_on_collide_wall(entity_a, entity_b)		
+			player_on_collide_wall(entity_a, entity_b)
 		}
 	})
 }
@@ -74,13 +75,15 @@ init_player_run_animation :: proc() -> Animation {
 cookie_setup :: proc(e: ^Entity) {
 
 	e.animation = init_cookie_idle_anim()
-	e.texture_offset = .BOTTOM
-	e.collision.rectangle = rl.Rectangle {
+	e.texture_offset = .CENTER
+	e.body_rectangle = rl.Rectangle {
 		width  = 10,
 		height = 10,
 	}
-	e.collision.offset = .BOTTOM
-	e.collision.is_active = true
+	e.offset = .CENTER
+	e.has_collision = true
+
+	init_default_physics(e, 1, 0.3, .dynamicBody)
 }
 
 cookie_draw :: proc(e: Entity) {
@@ -88,6 +91,9 @@ cookie_draw :: proc(e: Entity) {
 }
 
 cookie_update :: proc(e: ^Entity) {
+	e.pos = box.Body_GetPosition(e.body_id)
+	e.rotation = box.Rot_GetAngle(box.Body_GetRotation(e.body_id))
+
 	collision_box_update(e)
 	if rl.IsKeyPressed(.ENTER) {
 		scene_push(.GAME)
@@ -109,15 +115,18 @@ init_cookie_idle_anim :: proc() -> Animation {
 * WALL
 */
 wall_setup :: proc(e: ^Entity) {
-	e.pos.x = 100
-	e.texture_offset = .BOTTOM
+	e.pos.y = 50
+	e.texture_offset = .CENTER
 	e.animation = init_wall_anim()
-	e.collision.rectangle = rl.Rectangle {
+	e.body_rectangle = rl.Rectangle {
 		width  = f32(e.animation.texture.width + 1),
 		height = f32(e.animation.texture.height + 1),
 	}
-	e.collision.offset = .BOTTOM
-	e.collision.is_active = true
+	e.offset = .CENTER
+	e.has_collision = true
+
+	init_default_physics(e, 0, 0.3)
+
 }
 
 wall_update :: proc(e: ^Entity) {
