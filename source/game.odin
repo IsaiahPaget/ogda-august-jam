@@ -60,9 +60,14 @@ GameState :: struct {
 		all_entities: []Handle,
 	},
 	is_screen_shaking: bool,
+	screen_shake_time: f64,
+	screen_shake_timeElapsed: f64,
+	screen_shake_dropOff : f64,
+	screen_shake_speed : f64,
 }
 
 game_state: ^GameState
+
 
 rebuild_scratch :: proc() {
 	/*
@@ -81,8 +86,14 @@ get_player :: proc() -> (player: ^Entity, ok: bool) #optional_ok {
 }
 
 screen_shake :: proc(target: ^rl.Vector2) {
-	target.x = target.x + f32(4.0) * math.sin_f32(f32(rl.GetTime()) * f32(20.0))
-	target.y = target.y + f32(4.0) * math.sin_f32(f32(rl.GetTime()) * f32(20.0) * 1.3 + 1.7)
+	game_state.screen_shake_timeElapsed -= f64(rl.GetFrameTime()) * game_state.screen_shake_dropOff
+
+	target.x = target.x + f32(game_state.screen_shake_timeElapsed) * math.sin_f32(f32(rl.GetTime()) * f32(game_state.screen_shake_speed))
+	target.y = target.y + f32(game_state.screen_shake_timeElapsed) * math.sin_f32(f32(rl.GetTime()) * f32(game_state.screen_shake_speed) * 1.3 + 1.7)
+
+	if(game_state.screen_shake_timeElapsed <= 0) {
+		game_state.is_screen_shaking = false
+	}
 }
 
 game_camera :: proc() -> rl.Camera2D {
@@ -92,7 +103,12 @@ game_camera :: proc() -> rl.Camera2D {
 	player, ok := get_player()
 	
 	target : rl.Vector2 = player.pos if ok else rl.Vector2(0)
-	
+
+	if rl.IsKeyPressed(.SPACE){ 
+		game_state.is_screen_shaking = true
+		game_state.screen_shake_timeElapsed = game_state.screen_shake_time
+	}
+
 	if game_state.is_screen_shaking { 
 		screen_shake(&target) 
 	}
@@ -220,6 +236,9 @@ game_init :: proc() {
 	game_state = new(GameState)
 	game_state^ = GameState {
 		run            = true,
+		screen_shake_time = 4.0,
+		screen_shake_dropOff = 5.1,
+		screen_shake_speed = 40.0,
 	}
 
 	if len(game_state.scenes) == 0 {
