@@ -10,9 +10,10 @@ zero_entity: Entity // #readonly for zeroing entities
 EntityKind :: enum {
 	NIL,
 	PLAYER,
-	COOKIE,
+	CRAB,
 	GROUND,
 	PLAY_BUTTON,
+	CRAB_SPAWNER,
 }
 
 EntityTextureOffset :: enum {
@@ -188,11 +189,13 @@ entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 	case .NIL:
 	case .PLAYER:
 		player_setup(e)
-	case .COOKIE:
-		cookie_setup(e)
+	case .CRAB:
+		crab_setup(e)
 	case .GROUND:
 		ground_setup(e)
 	case .PLAY_BUTTON:
 		play_button_setup(e)
+	case .CRAB_SPAWNER:
+		crab_spawner_setup(e)
 	}
 }

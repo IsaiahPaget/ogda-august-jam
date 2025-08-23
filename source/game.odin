@@ -35,7 +35,7 @@ PIXEL_WINDOW_HEIGHT :: 180
 DEBUG :: true
 SCREEN_WIDTH :: 1280
 SCREEN_HEIGHT :: 720
-GRAVITY :: 500
+GRAVITY :: 1000
 // GLSL_VERSION :: 330
 
 Handle :: struct {
@@ -83,9 +83,7 @@ game_camera :: proc() -> rl.Camera2D {
 	w := f32(rl.GetScreenWidth())
 	h := f32(rl.GetScreenHeight())
 
-	player, ok := get_player()
-	target := player.pos if ok else rl.Vector2(0)
-	return {zoom = h / PIXEL_WINDOW_HEIGHT, target = target, offset = {w / 2, h / 2}}
+	return {zoom = h / PIXEL_WINDOW_HEIGHT, target = rl.Vector2(0), offset = {w / 2, h / 2}}
 }
 
 ui_camera :: proc() -> rl.Camera2D {
@@ -129,12 +127,14 @@ update :: proc() {
 		case .NIL:
 		case .PLAYER:
 			player_update(e)
-		case .COOKIE:
-			cookie_update(e)
+		case .CRAB:
+			crab_update(e)
 		case .GROUND:
 			ground_update(e)
 		case .PLAY_BUTTON:
 			play_button_update(e)
+		case .CRAB_SPAWNER:
+			crab_spawner_update(e)
 		}
 	}
 
@@ -159,12 +159,14 @@ draw :: proc() {
 		case .NIL:
 		case .PLAYER:
 			player_draw(e^)
-		case .COOKIE:
-			cookie_draw(e^)
+		case .CRAB:
+			crab_draw(e^)
 		case .GROUND:
 			ground_draw(e^)
 		case .PLAY_BUTTON:
 			play_button_draw(e^)
+		case .CRAB_SPAWNER:
+			crab_spawner_draw(e^)
 		}
 	}
 

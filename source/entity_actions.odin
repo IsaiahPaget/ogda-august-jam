@@ -6,12 +6,12 @@ import rl "vendor:raylib"
 * PLAYER
 */
 player_setup :: proc(e: ^Entity) {
-	e.pos.x = 5
-	e.pos.y = 5
+	e.pos.x = -75
+	e.pos.y = 45
 	e.texture_offset = .CENTER
 	e.collision.rectangle = rl.Rectangle {
-		x = e.pos.x,
-		y = e.pos.y,
+		x      = e.pos.x,
+		y      = e.pos.y,
 		width  = 15,
 		height = 15,
 	}
@@ -24,9 +24,10 @@ player_setup :: proc(e: ^Entity) {
 
 player_update :: proc(e: ^Entity) {
 	fmt.assertf(e != nil, "player missing", e)
+	PLAYER_JUMP_FORCE :: -250
 
 	if rl.IsKeyPressed(.SPACE) {
-		e.velocity.y = -100 // negative because the world is drawn from top to.CENTER
+		e.velocity.y = PLAYER_JUMP_FORCE // negative because the world is drawn from top to.CENTER
 		e.is_on_ground = false
 	}
 
@@ -41,13 +42,14 @@ player_update :: proc(e: ^Entity) {
 
 	process_collisions(e, proc(entity_a, entity_b: ^Entity) {
 		switch entity_b.kind {
-		case .NIL:
-		case .PLAY_BUTTON:
-		case .PLAYER:
-		case .COOKIE:
+		case .CRAB:
 			entity_destroy(entity_b)
 		case .GROUND:
 			player_on_collide_ground(entity_a, entity_b)
+		case .NIL:
+		case .PLAY_BUTTON:
+		case .PLAYER:
+		case .CRAB_SPAWNER:
 		}
 	})
 }
@@ -83,12 +85,37 @@ init_player_run_animation :: proc() -> Animation {
 }
 
 /*
-* COOKIE
+* CRAB SPAWNER
 */
-cookie_setup :: proc(e: ^Entity) {
-	e.animation = init_cookie_idle_anim()
+
+crab_spawner_setup :: proc(e: ^Entity) {
+
+	e.pos = rl.Vector2{100, 0}
+	if DEBUG {
+		fmt.println("setting up crab spawner") // TODO: delete this line later
+	}
+}
+
+crab_spawner_update :: proc(e: ^Entity) {
+	// TODO: spawn the crabs
+	fmt.println("set up crab")
+}
+
+crab_spawner_draw :: proc(e: Entity) {
+	if DEBUG {
+		rl.DrawRectangleV(e.pos, {15, 15}, rl.RED)
+	}
+}
+
+/*
+* CRAB
+*/
+crab_setup :: proc(e: ^Entity) {
+	e.animation = init_crab_idle_anim()
 	e.texture_offset = .CENTER
 	e.collision.rectangle = rl.Rectangle {
+		x      = e.pos.x,
+		y      = e.pos.y,
 		width  = 10,
 		height = 10,
 	}
@@ -96,15 +123,15 @@ cookie_setup :: proc(e: ^Entity) {
 	e.collision.is_active = true
 }
 
-cookie_draw :: proc(e: Entity) {
+crab_draw :: proc(e: Entity) {
 	entity_draw_default(e)
 }
 
-cookie_update :: proc(e: ^Entity) {
+crab_update :: proc(e: ^Entity) {
 	collision_box_update(e)
 }
 
-init_cookie_idle_anim :: proc() -> Animation {
+init_crab_idle_anim :: proc() -> Animation {
 	return Animation {
 		texture = rl.LoadTexture("assets/round_cat.png"),
 		frame_count = 1,
@@ -115,17 +142,18 @@ init_cookie_idle_anim :: proc() -> Animation {
 	}
 }
 
+
 /*
-* Ground
+* GROUND
 */
 ground_setup :: proc(e: ^Entity) {
-	e.pos.y = 100
+	e.pos.y = 50
 	e.texture_offset = .CENTER
 	e.animation = init_ground_anim()
 	e.collision.rectangle = rl.Rectangle {
-		x = e.pos.x,
-		y = e.pos.y,
-		width  = f32(e.animation.texture.width + 1),
+		x      = e.pos.x,
+		y      = e.pos.y,
+		width  = f32(SCREEN_WIDTH + 1),
 		height = f32(e.animation.texture.height + 1),
 	}
 	e.collision.offset = .CENTER
@@ -150,10 +178,12 @@ init_ground_anim :: proc() -> Animation {
 
 
 /*
-* Play button
+* PLAY BUTTON
 */
 
 play_button_setup :: proc(e: ^Entity) {
+	e.pos.x = -100
+	e.pos.y = -40
 }
 play_button_update :: proc(e: ^Entity) {
 	if rl.IsKeyPressed(.ENTER) {
@@ -162,6 +192,7 @@ play_button_update :: proc(e: ^Entity) {
 }
 play_button_draw :: proc(e: Entity) {
 	rl.DrawRectangleV(rl.Vector2{e.pos.x, e.pos.y}, rl.Vector2{200, 80}, rl.DARKGRAY)
+	rl.DrawText("Press enter to play", -40, 0, 8, rl.WHITE)
 }
 
 // init_play_button_anim :: proc() -> Animation {
