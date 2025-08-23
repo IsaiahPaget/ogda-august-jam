@@ -120,15 +120,15 @@ crab_spawner_draw :: proc(e: Entity) {
 crab_setup :: proc(e: ^Entity) {
 	e.animation = init_crab_run_anim()
 	e.lifespan_s = 10
-	e.texture_offset = .CENTER
+	e.texture_offset = .BOTTOM
 	e.collision.rectangle = rl.Rectangle {
-		width  = f32(e.animation.texture.width + 1) / f32(e.animation.frame_count),
-		height = f32(e.animation.texture.height + 1),
+		width  = 15,
+		height = 15,
 	}
-	e.collision.offset = .CENTER
+	e.collision.offset = .BOTTOM
 	e.collision.is_active = true
 	e.has_physics = true
-	e.scale = 1
+	e.scale = 0.75
 }
 
 crab_draw :: proc(e: Entity) {
@@ -187,13 +187,13 @@ init_crab_run_anim :: proc() -> Animation {
 * GROUND
 */
 ground_setup :: proc(e: ^Entity) {
-	e.pos.y = 50
+	e.pos.y = 75
 	e.texture_offset = .CENTER
 	e.animation = init_ground_anim()
 	e.collision.rectangle = rl.Rectangle {
 		x      = e.pos.x,
 		y      = e.pos.y,
-		width  = f32(SCREEN_WIDTH + 1),
+		width  = f32(e.animation.texture.width + 1),
 		height = f32(e.animation.texture.height + 1),
 	}
 	e.collision.offset = .CENTER
@@ -201,16 +201,29 @@ ground_setup :: proc(e: ^Entity) {
 }
 
 ground_update :: proc(e: ^Entity) {
+	MOVE_SPEED :: -100
+	e.velocity = rl.Vector2{MOVE_SPEED, 0}
+	e.pos += e.velocity * rl.GetFrameTime()
+	if e.pos.x < -200 {
+		e.pos.x = 0
+	}
 	collision_box_update(e)
 }
 
 ground_draw :: proc(e: Entity) {
-	entity_draw_default(e)
+	texture := e.animation.texture
+	offset := get_texture_position(e)
+
+	rl.DrawTextureV(texture, offset, rl.WHITE)
+	if DEBUG {
+		rl.DrawCircleV(e.pos, 2, rl.PINK)
+		rl.DrawRectangleRec(e.collision.rectangle, rl.ColorAlpha(rl.BLUE, .50))
+	}
 }
 
 init_ground_anim :: proc() -> Animation {
 	return Animation {
-		texture = rl.LoadTexture("assets/grass_block.png"),
+		texture = rl.LoadTexture("assets/ground/ground.png"),
 		frame_count = 1,
 		kind = .NIL,
 	}

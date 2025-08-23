@@ -43,6 +43,8 @@ Entity :: struct {
 	// SPAWNER
 	last_spawn_s:       f64, // since game init
 	spawner_interval_s: f64,
+
+	//
 }
 
 
