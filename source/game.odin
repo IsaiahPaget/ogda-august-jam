@@ -47,16 +47,16 @@ Handle :: struct {
 
 GameState :: struct {
 	// Entity
-	entity_top_count:  int,
-	latest_entity_id:  int,
-	entities:          [MAX_ENTITIES]Entity,
-	entity_free_list:  [dynamic]int,
+	entity_top_count: int,
+	latest_entity_id: int,
+	entities:         [MAX_ENTITIES]Entity,
+	entity_free_list: [dynamic]int,
 	// Scenes
-	scenes:            [dynamic]Scene,
+	scenes:           [dynamic]Scene,
 	// Stuff
-	player_handle:     Handle,
-	run:               bool,
-	scratch:           struct {
+	player_handle:    Handle,
+	run:              bool,
+	scratch:          struct {
 		all_entities: []Handle,
 	},
 }
@@ -135,6 +135,10 @@ update :: proc() {
 			play_button_update(e)
 		case .CRAB_SPAWNER:
 			crab_spawner_update(e)
+		case .FOREGROUND:
+			foreground_update(e)
+		case .BACKGROUND:
+			background_update(e)
 		}
 	}
 
@@ -147,7 +151,7 @@ draw :: proc() {
 
 	// draw to the window
 	rl.BeginDrawing()
-	rl.ClearBackground(rl.GRAY)
+	rl.ClearBackground(rl.Color{155, 219, 245, 1})
 
 	rl.BeginMode2D(game_camera())
 	// big :update time
@@ -167,6 +171,10 @@ draw :: proc() {
 			play_button_draw(e^)
 		case .CRAB_SPAWNER:
 			crab_spawner_draw(e^)
+		case .FOREGROUND:
+			foreground_draw(e^)
+		case .BACKGROUND:
+			background_draw(e^)
 		}
 	}
 

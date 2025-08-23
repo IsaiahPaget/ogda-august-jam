@@ -49,6 +49,8 @@ player_update :: proc(e: ^Entity) {
 		case .PLAY_BUTTON:
 		case .PLAYER:
 		case .CRAB_SPAWNER:
+		case .FOREGROUND:
+		case .BACKGROUND:
 		}
 	})
 }
@@ -157,10 +159,12 @@ crab_update :: proc(e: ^Entity) {
 		case .CRAB:
 		case .GROUND:
 			crab_on_collide_ground(entity_a, entity_b)
+		case .FOREGROUND:
 		case .NIL:
 		case .PLAY_BUTTON:
 		case .PLAYER:
 		case .CRAB_SPAWNER:
+		case .BACKGROUND:
 		}
 	})
 }
@@ -182,6 +186,111 @@ init_crab_run_anim :: proc() -> Animation {
 	}
 }
 
+// ground helper
+ground_replace :: proc(e: ^Entity) {
+	if e.pos.x < -f32(e.animation.texture.width) - 50 {
+		// Instead of resetting to .initial_position,
+		// move this background tile just after the rightmost one
+		rightmost_x: f32 = -999999
+		for handle in entity_get_all() {
+			g := entity_get(handle)
+			if g.kind == .BACKGROUND && g != e {
+				if g.pos.x > rightmost_x {
+					rightmost_x = g.pos.x - 2
+				}
+			}
+		}
+		e.pos.x = rightmost_x + f32(e.animation.texture.width)
+	}
+}
+/*
+* BACKGROUND
+*/
+background_setup :: proc(e: ^Entity) {
+	e.pos.y = 30
+	e.pos.x = -50
+	e.texture_offset = .CENTER
+	e.animation = init_background_anim()
+}
+background_update :: proc(e: ^Entity) {
+	MOVE_SPEED :: -80
+	e.velocity = rl.Vector2{MOVE_SPEED, 0}
+	e.pos += e.velocity * rl.GetFrameTime()
+
+	ground_replace(e)
+
+	collision_box_update(e)
+}
+
+background_draw :: proc(e: Entity) {
+	texture := e.animation.texture
+	offset := get_texture_position(e)
+
+	rl.DrawTextureV(texture, offset, rl.WHITE)
+	if DEBUG {
+		rl.DrawCircleV(e.pos, 2, rl.PINK)
+		rl.DrawRectangleRec(e.collision.rectangle, rl.ColorAlpha(rl.BLUE, .50))
+	}
+}
+
+init_background_anim :: proc() -> Animation {
+	return Animation {
+		texture = rl.LoadTexture("assets/ground/background.png"),
+		frame_count = 1,
+		kind = .NIL,
+	}
+}
+
+/*
+* FOREGROUND
+*/
+foreground_setup :: proc(e: ^Entity) {
+	e.pos.y = 90
+	e.pos.x = -50
+	e.texture_offset = .CENTER
+	e.animation = init_foreground_anim()
+}
+
+foreground_update :: proc(e: ^Entity) {
+	MOVE_SPEED :: -110
+	e.velocity = rl.Vector2{MOVE_SPEED, 0}
+	e.pos += e.velocity * rl.GetFrameTime()
+
+	if e.pos.x < -f32(e.animation.texture.width) - 50 {
+		// Instead of resetting to .initial_position,
+		// move this foreground tile just after the rightmost one
+		rightmost_x: f32 = -999999
+		for handle in entity_get_all() {
+			g := entity_get(handle)
+			if g.kind == .FOREGROUND && g != e {
+				if g.pos.x > rightmost_x {
+					rightmost_x = g.pos.x - 2
+				}
+			}
+		}
+		e.pos.x = rightmost_x + f32(e.animation.texture.width)
+	}
+	collision_box_update(e)
+}
+
+foreground_draw :: proc(e: Entity) {
+	texture := e.animation.texture
+	offset := get_texture_position(e)
+
+	rl.DrawTextureV(texture, offset, rl.WHITE)
+	if DEBUG {
+		rl.DrawCircleV(e.pos, 2, rl.PINK)
+		rl.DrawRectangleRec(e.collision.rectangle, rl.ColorAlpha(rl.BLUE, .50))
+	}
+}
+
+init_foreground_anim :: proc() -> Animation {
+	return Animation {
+		texture = rl.LoadTexture("assets/ground/foreground.png"),
+		frame_count = 1,
+		kind = .NIL,
+	}
+}
 
 /*
 * GROUND
@@ -203,23 +312,23 @@ ground_setup :: proc(e: ^Entity) {
 
 ground_update :: proc(e: ^Entity) {
 	MOVE_SPEED :: -100
-    e.velocity = rl.Vector2{MOVE_SPEED, 0}
-    e.pos += e.velocity * rl.GetFrameTime()
+	e.velocity = rl.Vector2{MOVE_SPEED, 0}
+	e.pos += e.velocity * rl.GetFrameTime()
 
-    if e.pos.x < -f32(e.animation.texture.width) -50 {
-        // Instead of resetting to .initial_position,
-        // move this ground tile just after the rightmost one
-        rightmost_x: f32 = -999999
-        for handle in entity_get_all() {
-            g := entity_get(handle)
-            if g.kind == .GROUND && g != e {
-                if g.pos.x > rightmost_x {
-                    rightmost_x = g.pos.x - 1
-                }
-            }
-        }
-        e.pos.x = rightmost_x + f32(e.animation.texture.width)
-    }
+	if e.pos.x < -f32(e.animation.texture.width) - 50 {
+		// Instead of resetting to .initial_position,
+		// move this ground tile just after the rightmost one
+		rightmost_x: f32 = -999999
+		for handle in entity_get_all() {
+			g := entity_get(handle)
+			if g.kind == .GROUND && g != e {
+				if g.pos.x > rightmost_x {
+					rightmost_x = g.pos.x - 2
+				}
+			}
+		}
+		e.pos.x = rightmost_x + f32(e.animation.texture.width)
+	}
 	collision_box_update(e)
 }
 

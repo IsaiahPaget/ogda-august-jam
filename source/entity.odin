@@ -12,6 +12,8 @@ EntityKind :: enum {
 	PLAYER,
 	CRAB,
 	GROUND,
+	FOREGROUND,
+	BACKGROUND,
 	PLAY_BUTTON,
 	CRAB_SPAWNER,
 }
@@ -202,5 +204,9 @@ entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 		play_button_setup(e)
 	case .CRAB_SPAWNER:
 		crab_spawner_setup(e)
+	case .FOREGROUND:
+		foreground_setup(e)
+	case .BACKGROUND:
+		background_setup(e)
 	}
 }
