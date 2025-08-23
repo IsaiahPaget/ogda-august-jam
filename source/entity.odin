@@ -27,12 +27,15 @@ Entity :: struct {
 	kind:           EntityKind,
 	collision:      CollisionShape,
 	pos:            rl.Vector2,
+	velocity:       rl.Vector2,
 	rotation:       f32,
 	scale:          f32,
+	has_physics:    bool,
 	texture_offset: EntityTextureOffset,
 	animation:      Animation,
 	hidden:         bool,
 	lifespan_ms:    int,
+	is_on_ground:   bool,
 	created_on:     f64,
 }
 
@@ -53,14 +56,7 @@ entity_draw_default :: proc(e: Entity) {
 		src.x += -src.width
 	}
 
-	rl.DrawTexturePro(
-		texture,
-		src,
-		destination,
-		e.rotation,
-		e.scale,
-		rl.WHITE,
-	)
+	rl.DrawTexturePro(texture, src, destination, e.rotation, e.scale, rl.WHITE)
 	if DEBUG {
 		rl.DrawCircleV(e.pos, 2, rl.PINK)
 		rl.DrawRectangleRec(e.collision.rectangle, rl.ColorAlpha(rl.BLUE, .50))
