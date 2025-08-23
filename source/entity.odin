@@ -11,7 +11,8 @@ EntityKind :: enum {
 	NIL,
 	PLAYER,
 	COOKIE,
-	WALL,
+	GROUND,
+	PLAY_BUTTON,
 }
 
 EntityTextureOffset :: enum {
@@ -189,7 +190,9 @@ entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 		player_setup(e)
 	case .COOKIE:
 		cookie_setup(e)
-	case .WALL:
-		wall_setup(e)
+	case .GROUND:
+		ground_setup(e)
+	case .PLAY_BUTTON:
+		play_button_setup(e)
 	}
 }

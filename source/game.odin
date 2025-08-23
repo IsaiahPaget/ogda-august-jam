@@ -131,8 +131,10 @@ update :: proc() {
 			player_update(e)
 		case .COOKIE:
 			cookie_update(e)
-		case .WALL:
-			wall_update(e)
+		case .GROUND:
+			ground_update(e)
+		case .PLAY_BUTTON:
+			play_button_update(e)
 		}
 	}
 
@@ -159,8 +161,10 @@ draw :: proc() {
 			player_draw(e^)
 		case .COOKIE:
 			cookie_draw(e^)
-		case .WALL:
-			wall_draw(e^)
+		case .GROUND:
+			ground_draw(e^)
+		case .PLAY_BUTTON:
+			play_button_draw(e^)
 		}
 	}
 
@@ -207,7 +211,7 @@ game_init :: proc() {
 	entity_init_core() // Initialize the safe default entity
 	game_state = new(GameState)
 	game_state^ = GameState {
-		run            = true,
+		run = true,
 	}
 
 	if len(game_state.scenes) == 0 {
