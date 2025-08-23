@@ -19,7 +19,8 @@ main_menu_destroy :: proc(dead_scene: Scene) {
 */
 game_setup :: proc(scene: ^Scene) {
 	entity_clear_all()
-	entity_create(.PLAYER)	
+	player := entity_create(.PLAYER)	
+	game_state.player_handle = player.handle
 }
 
 game_transition :: proc(scene: ^Scene) {

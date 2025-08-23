@@ -30,6 +30,7 @@ package game
 import "core:fmt"
 import "core:math/linalg"
 import rl "vendor:raylib"
+import "core:math"
 
 PIXEL_WINDOW_HEIGHT :: 180
 DEBUG :: true
@@ -58,6 +59,7 @@ GameState :: struct {
 	scratch:          struct {
 		all_entities: []Handle,
 	},
+	is_screen_shaking: bool,
 }
 
 game_state: ^GameState
@@ -78,12 +80,23 @@ get_player :: proc() -> (player: ^Entity, ok: bool) #optional_ok {
 	return entity_get(game_state.player_handle)
 }
 
+screen_shake :: proc(target: ^rl.Vector2) {
+	target.x = target.x + f32(4.0) * math.sin_f32(f32(rl.GetTime()) * f32(20.0))
+	target.y = target.y + f32(4.0) * math.sin_f32(f32(rl.GetTime()) * f32(20.0) * 1.3 + 1.7)
+}
+
 game_camera :: proc() -> rl.Camera2D {
 	w := f32(rl.GetScreenWidth())
 	h := f32(rl.GetScreenHeight())
 
 	player, ok := get_player()
-	target := player.pos if ok else rl.Vector2(0)
+	
+	target : rl.Vector2 = player.pos if ok else rl.Vector2(0)
+	
+	if game_state.is_screen_shaking { 
+		screen_shake(&target) 
+	}
+
 	return {zoom = h / PIXEL_WINDOW_HEIGHT, target = target, offset = {w / 2, h / 2}}
 }
 
