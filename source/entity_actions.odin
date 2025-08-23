@@ -12,13 +12,14 @@ player_setup :: proc(e: ^Entity) {
 	e.collision.rectangle = rl.Rectangle {
 		x      = e.pos.x,
 		y      = e.pos.y,
-		width  = 15,
-		height = 15,
+		width  = 15.0,
+		height = 15.0,
 	}
 	e.collision.offset = .CENTER
 	e.collision.is_active = true
 	e.animation = init_player_run_animation()
 	e.has_physics = true
+	e.scale = 0.35
 }
 
 
@@ -74,7 +75,7 @@ init_player_idle_animation :: proc() -> Animation {
 }
 init_player_run_animation :: proc() -> Animation {
 	return Animation {
-		texture = rl.LoadTexture("assets/cat_run.png"),
+		texture = rl.LoadTexture("assets/CorgiRun.png"),
 		frame_count = 4,
 		frame_timer = 0,
 		current_frame = 0,
