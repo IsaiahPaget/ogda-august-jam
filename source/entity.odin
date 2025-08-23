@@ -10,8 +10,10 @@ zero_entity: Entity // #readonly for zeroing entities
 EntityKind :: enum {
 	NIL,
 	PLAYER,
-	COOKIE,
-	WALL,
+	CRAB,
+	GROUND,
+	PLAY_BUTTON,
+	CRAB_SPAWNER,
 }
 
 EntityTextureOffset :: enum {
@@ -23,20 +25,24 @@ EntityTextureOffset :: enum {
 }
 
 Entity :: struct {
-	handle:         Handle,
-	kind:           EntityKind,
-	collision:      CollisionShape,
-	pos:            rl.Vector2,
-	velocity:       rl.Vector2,
-	rotation:       f32,
-	scale:          f32,
-	has_physics:    bool,
-	texture_offset: EntityTextureOffset,
-	animation:      Animation,
-	hidden:         bool,
-	lifespan_ms:    int,
-	is_on_ground:   bool,
-	created_on:     f64,
+	handle:           Handle,
+	kind:             EntityKind,
+	collision:        CollisionShape,
+	pos:              rl.Vector2,
+	velocity:         rl.Vector2,
+	rotation:         f32,
+	scale:            f32,
+	has_physics:      bool,
+	texture_offset:   EntityTextureOffset,
+	animation:        Animation,
+	hidden:           bool,
+	lifespan_s:      f64,
+	is_on_ground:     bool,
+	created_on:       f64,
+
+	// SPAWNER
+	last_spawn_s:       f64, // since game init
+	spawner_interval_s: f64,
 }
 
 
@@ -187,9 +193,13 @@ entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 	case .NIL:
 	case .PLAYER:
 		player_setup(e)
-	case .COOKIE:
-		cookie_setup(e)
-	case .WALL:
-		wall_setup(e)
+	case .CRAB:
+		crab_setup(e)
+	case .GROUND:
+		ground_setup(e)
+	case .PLAY_BUTTON:
+		play_button_setup(e)
+	case .CRAB_SPAWNER:
+		crab_spawner_setup(e)
 	}
 }

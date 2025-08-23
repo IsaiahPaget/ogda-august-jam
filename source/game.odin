@@ -35,7 +35,7 @@ PIXEL_WINDOW_HEIGHT :: 180
 DEBUG :: true
 SCREEN_WIDTH :: 1280
 SCREEN_HEIGHT :: 720
-GRAVITY :: 500
+GRAVITY :: 1000
 // GLSL_VERSION :: 330
 
 Handle :: struct {
@@ -47,16 +47,17 @@ Handle :: struct {
 
 GameState :: struct {
 	// Entity
-	entity_top_count: int,
-	latest_entity_id: int,
-	entities:         [MAX_ENTITIES]Entity,
-	entity_free_list: [dynamic]int,
+	entity_top_count:  int,
+	latest_entity_id:  int,
+	entities:          [MAX_ENTITIES]Entity,
+	entity_free_list:  [dynamic]int,
 	// Scenes
-	scenes:           [dynamic]Scene,
+	scenes:            [dynamic]Scene,
 	// Stuff
-	player_handle:    Handle,
-	run:              bool,
-	scratch:          struct {
+	player_handle:     Handle,
+	screen_is_shaking: bool,
+	run:               bool,
+	scratch:           struct {
 		all_entities: []Handle,
 	},
 }
@@ -83,9 +84,7 @@ game_camera :: proc() -> rl.Camera2D {
 	w := f32(rl.GetScreenWidth())
 	h := f32(rl.GetScreenHeight())
 
-	player, ok := get_player()
-	target := player.pos if ok else rl.Vector2(0)
-	return {zoom = h / PIXEL_WINDOW_HEIGHT, target = target, offset = {w / 2, h / 2}}
+	return {zoom = h / PIXEL_WINDOW_HEIGHT, target = rl.Vector2(0), offset = {w / 2, h / 2}}
 }
 
 ui_camera :: proc() -> rl.Camera2D {
@@ -118,6 +117,8 @@ update :: proc() {
 	game_state.scratch = {}
 	rebuild_scratch()
 
+	fmt.println(len(game_state.scratch.all_entities))
+
 	// big :update time
 	for handle in entity_get_all() {
 		e := entity_get(handle)
@@ -129,10 +130,14 @@ update :: proc() {
 		case .NIL:
 		case .PLAYER:
 			player_update(e)
-		case .COOKIE:
-			cookie_update(e)
-		case .WALL:
-			wall_update(e)
+		case .CRAB:
+			crab_update(e)
+		case .GROUND:
+			ground_update(e)
+		case .PLAY_BUTTON:
+			play_button_update(e)
+		case .CRAB_SPAWNER:
+			crab_spawner_update(e)
 		}
 	}
 
@@ -157,10 +162,14 @@ draw :: proc() {
 		case .NIL:
 		case .PLAYER:
 			player_draw(e^)
-		case .COOKIE:
-			cookie_draw(e^)
-		case .WALL:
-			wall_draw(e^)
+		case .CRAB:
+			crab_draw(e^)
+		case .GROUND:
+			ground_draw(e^)
+		case .PLAY_BUTTON:
+			play_button_draw(e^)
+		case .CRAB_SPAWNER:
+			crab_spawner_draw(e^)
 		}
 	}
 
@@ -207,7 +216,7 @@ game_init :: proc() {
 	entity_init_core() // Initialize the safe default entity
 	game_state = new(GameState)
 	game_state^ = GameState {
-		run            = true,
+		run = true,
 	}
 
 	if len(game_state.scenes) == 0 {
