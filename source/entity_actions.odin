@@ -37,8 +37,7 @@ player_update :: proc(e: ^Entity) {
 		}
 	}
 
-	e.pos.x += e.velocity.x * rl.GetFrameTime()
-	e.pos.y += e.velocity.y * rl.GetFrameTime()
+	e.pos += e.velocity * rl.GetFrameTime()
 
 	process_collisions(e, proc(entity_a, entity_b: ^Entity) {
 		switch entity_b.kind {
@@ -91,6 +90,7 @@ init_player_run_animation :: proc() -> Animation {
 crab_spawner_setup :: proc(e: ^Entity) {
 
 	e.pos = rl.Vector2{100, 0}
+	e.spawner_interval_s = 10
 	if DEBUG {
 		fmt.println("setting up crab spawner") // TODO: delete this line later
 	}
@@ -98,7 +98,14 @@ crab_spawner_setup :: proc(e: ^Entity) {
 
 crab_spawner_update :: proc(e: ^Entity) {
 	// TODO: spawn the crabs
-	fmt.println("set up crab")
+	// Check if 10 seconds have passed
+	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
+		crab := entity_create(.CRAB)
+		crab.pos = rl.Vector2{110, 10}
+		crab.collision.rectangle.x = 110
+		crab.collision.rectangle.y = 10
+		e.last_spawn_s = rl.GetTime()
+	}
 }
 
 crab_spawner_draw :: proc(e: Entity) {
@@ -112,15 +119,15 @@ crab_spawner_draw :: proc(e: Entity) {
 */
 crab_setup :: proc(e: ^Entity) {
 	e.animation = init_crab_idle_anim()
+	e.lifespan_s = 10
 	e.texture_offset = .CENTER
 	e.collision.rectangle = rl.Rectangle {
-		x      = e.pos.x,
-		y      = e.pos.y,
 		width  = 10,
 		height = 10,
 	}
 	e.collision.offset = .CENTER
 	e.collision.is_active = true
+	e.has_physics = true
 }
 
 crab_draw :: proc(e: Entity) {
@@ -128,7 +135,39 @@ crab_draw :: proc(e: Entity) {
 }
 
 crab_update :: proc(e: ^Entity) {
-	collision_box_update(e)
+	
+	MOVE_SPEED :: -100
+
+	if rl.GetTime() - e.created_on >= e.lifespan_s {
+		entity_destroy(e)
+	}
+
+	if e.has_physics {
+		if ! e.is_on_ground {
+			e.velocity.y += get_applied_gravity()
+		}
+	}
+
+	e.velocity.x = MOVE_SPEED
+	e.pos += e.velocity * rl.GetFrameTime()
+
+	process_collisions(e, proc(entity_a, entity_b: ^Entity) {
+		switch entity_b.kind {
+		case .CRAB:
+		case .GROUND:
+			crab_on_collide_ground(entity_a, entity_b)
+		case .NIL:
+		case .PLAY_BUTTON:
+		case .PLAYER:
+		case .CRAB_SPAWNER:
+		}
+	})
+}
+
+crab_on_collide_ground :: proc(crab, ground: ^Entity) {
+	crab.is_on_ground = true
+	crab.velocity.y = 0
+	entity_move_and_slide(crab, ground)
 }
 
 init_crab_idle_anim :: proc() -> Animation {

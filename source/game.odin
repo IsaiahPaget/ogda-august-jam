@@ -47,16 +47,17 @@ Handle :: struct {
 
 GameState :: struct {
 	// Entity
-	entity_top_count: int,
-	latest_entity_id: int,
-	entities:         [MAX_ENTITIES]Entity,
-	entity_free_list: [dynamic]int,
+	entity_top_count:  int,
+	latest_entity_id:  int,
+	entities:          [MAX_ENTITIES]Entity,
+	entity_free_list:  [dynamic]int,
 	// Scenes
-	scenes:           [dynamic]Scene,
+	scenes:            [dynamic]Scene,
 	// Stuff
-	player_handle:    Handle,
-	run:              bool,
-	scratch:          struct {
+	player_handle:     Handle,
+	screen_is_shaking: bool,
+	run:               bool,
+	scratch:           struct {
 		all_entities: []Handle,
 	},
 }
