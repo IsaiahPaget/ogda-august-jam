@@ -93,6 +93,7 @@ Textures :: struct {
 	towel_green:         rl.Texture2D,
 	towel_red:           rl.Texture2D,
 	towel_yellow:        rl.Texture2D,
+	pidgeon_flying:      rl.Texture2D,
 }
 
 game_state: ^GameState
@@ -129,7 +130,10 @@ get_player :: proc() -> (player: ^Entity, ok: bool) #optional_ok {
 	return entity_get(game_state.player_handle)
 }
 
-do_screen_shake :: proc() {
+do_screen_shake :: proc(time_s, drop_off, speed: f64) {
+	game_state.screen_shake_time = time_s
+	game_state.screen_shake_dropOff = drop_off
+	game_state.screen_shake_speed = speed
 	game_state.is_screen_shaking = true
 	game_state.screen_shake_timeElapsed = game_state.screen_shake_time
 }
@@ -245,6 +249,10 @@ update :: proc() {
 			towel_spawner_update(e)
 		case .TOWEL:
 			towel_update(e)
+		case .PIDGEON_SPAWNER:
+			pidgeon_spawner_update(e)
+		case .PIDGEON:
+			pidgeon_update(e)
 		}
 	}
 
@@ -296,6 +304,10 @@ draw :: proc() {
 			towel_draw(e^)
 		case .PLAYER:
 			player_draw(e^)
+		case .PIDGEON_SPAWNER:
+			pidgeon_spawner_draw(e^)
+		case .PIDGEON:
+			pidgeon_draw(e^)
 		}
 	}
 
@@ -367,6 +379,7 @@ game_init :: proc() {
 			towel_green         = rl.LoadTexture("assets/GreenTowel.png"),
 			towel_red           = rl.LoadTexture("assets/RedTowel.png"),
 			towel_yellow        = rl.LoadTexture("assets/YellowTowel.png"),
+			pidgeon_flying      = rl.LoadTexture("assets/pidgeon_flying.png"),
 		},
 	}
 
@@ -406,6 +419,7 @@ game_shutdown :: proc() {
 	rl.UnloadTexture(game_state.textures.towel_green)
 	rl.UnloadTexture(game_state.textures.towel_red)
 	rl.UnloadTexture(game_state.textures.towel_yellow)
+	rl.UnloadTexture(game_state.textures.pidgeon_flying)
 
 	delete(game_state.scenes) // free the scenes array
 	delete(game_state.entity_free_list) // free the entity freelist

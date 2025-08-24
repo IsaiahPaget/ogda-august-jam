@@ -60,7 +60,7 @@ player_update :: proc(e: ^Entity) {
 		e.animation = init_player_rocket_animation()
 		e.velocity = rl.Vector2{50, PLAYER_JUMP_FORCE} // apply up negative because world is drawn top to bottom
 		e.cur_rockets -= 1
-		do_screen_shake()
+		do_screen_shake(4, 5.1,40)
 
 		fmt.assertf(e.cur_rockets > -1, "some how you spent zero rockets")
 	} else if (e.velocity.y > 0 && e.animation.kind != .ROCKET) {
@@ -95,6 +95,9 @@ player_update :: proc(e: ^Entity) {
 		case .BACKGROUND:
 		case .SUN:
 		case .PLAYER_HEALTH_BAR:
+		case .PIDGEON_SPAWNER:
+		case .PIDGEON:
+			player_on_collide_pidgeon(entity_a, entity_b)
 		case .TOWEL_SPAWNER:
 		case .TOWEL:
 			player_on_collide_towel(entity_a, entity_b)
@@ -102,12 +105,18 @@ player_update :: proc(e: ^Entity) {
 	})
 }
 
+player_on_collide_pidgeon :: proc(player, pidgeon: ^Entity) {
+	do_screen_shake(1.5, 2, 60)
+	change_speed(-100)
+	pidgeon.velocity.y += -50
+}
+
 player_on_collide_towel :: proc(player, towel: ^Entity) {
 	change_speed(50)
 }
 
 player_on_collide_crab :: proc(player, crab: ^Entity) {
-	do_screen_shake()
+	do_screen_shake(1.5, 2, 60)
 	change_speed(-200)
 	crab.velocity.y += -300
 }
@@ -195,7 +204,7 @@ crab_spawner_setup :: proc(e: ^Entity) {
 crab_spawner_update :: proc(e: ^Entity) {
 	if rl.GetTime() - e.last_spawn_s >= rand.float64_range(0.5, 5) {
 		crab := entity_create(.CRAB)
-		crab.pos = rl.Vector2{200, 20}
+		crab.pos = rl.Vector2{300, 20}
 		crab.collision.rectangle.x = 110
 		crab.collision.rectangle.y = 10
 		e.last_spawn_s = rl.GetTime()
@@ -262,6 +271,8 @@ crab_update :: proc(e: ^Entity) {
 		case .PLAYER_HEALTH_BAR:
 		case .TOWEL:
 		case .TOWEL_SPAWNER:
+		case .PIDGEON_SPAWNER:
+		case .PIDGEON:
 		}
 	})
 }
@@ -497,7 +508,7 @@ towel_spawner_setup :: proc(e: ^Entity) {
 towel_spawner_update :: proc(e: ^Entity) {
 	if rl.GetTime() - e.last_spawn_s >= rand.float64_range(2, 10) {
 		towel := entity_create(.TOWEL)
-		towel.pos = rl.Vector2{200, 70}
+		towel.pos = rl.Vector2{300, 70}
 		towel.collision.rectangle.x = 110
 		towel.collision.rectangle.y = 10
 		e.last_spawn_s = rl.GetTime()
@@ -556,4 +567,71 @@ init_towel_idle_anim :: proc() -> Animation {
 	}
 
 	return Animation{texture = texture, frame_count = 1, kind = .IDLE}
+}
+
+/*
+* PIDGEON SPAWNER
+*/
+
+pidgeon_spawner_setup :: proc(e: ^Entity) {
+}
+
+pidgeon_spawner_update :: proc(e: ^Entity) {
+	if rl.GetTime() - e.last_spawn_s >= rand.float64_range(2, 10) {
+		pidgeon := entity_create(.PIDGEON)
+		pidgeon.pos = rl.Vector2{300, rand.float32_range(-20, 30)}
+		pidgeon.collision.rectangle.x = 110
+		pidgeon.collision.rectangle.y = 10
+		e.last_spawn_s = rl.GetTime()
+	}
+}
+
+pidgeon_spawner_draw :: proc(e: Entity) {
+	if DEBUG {
+		rl.DrawRectangleV(e.pos, {30, 30}, rl.BLUE)
+	}
+}
+
+/*
+* PIDGEON
+*/
+pidgeon_setup :: proc(e: ^Entity) {
+	e.lifespan_s = 10
+	e.animation = init_pidgeon_fly_anim()
+	e.texture_offset = .CENTER
+	e.collision.rectangle = rl.Rectangle {
+		width  = 10,
+		height = 10,
+	}
+	e.collision.offset = .CENTER
+	e.collision.is_active = true
+	e.scale = 0.75
+	e.animation.flip_x = true
+}
+
+pidgeon_draw :: proc(e: Entity) {
+	entity_draw_default(e)
+}
+
+pidgeon_update :: proc(e: ^Entity) {
+
+	MOVE_SPEED_MULTIPLIER :: 1.3
+
+	if rl.GetTime() - e.created_on >= e.lifespan_s {
+		entity_destroy(e)
+	}
+
+	e.velocity.x = game_state.current_speed * MOVE_SPEED_MULTIPLIER
+	e.pos += e.velocity * rl.GetFrameTime()
+
+	collision_box_update(e)
+}
+
+init_pidgeon_fly_anim :: proc() -> Animation {
+	return Animation {
+		texture = game_state.textures.pidgeon_flying,
+		frame_count = 4,
+		frame_length = 0.1,
+		kind = .IDLE,
+	}
 }

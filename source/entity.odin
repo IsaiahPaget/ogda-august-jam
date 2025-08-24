@@ -20,6 +20,8 @@ EntityKind :: enum {
 	PLAYER_HEALTH_BAR,
 	TOWEL,
 	TOWEL_SPAWNER,
+	PIDGEON,
+	PIDGEON_SPAWNER,
 }
 
 EntityTextureOffset :: enum {
@@ -231,5 +233,9 @@ entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 		towel_setup(e)
 	case .TOWEL_SPAWNER:
 		towel_spawner_setup(e)
+	case .PIDGEON:
+		pidgeon_setup(e)
+	case .PIDGEON_SPAWNER:
+		pidgeon_spawner_setup(e)
 	}
 }
