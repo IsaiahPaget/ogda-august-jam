@@ -5,6 +5,7 @@ import rl "vendor:raylib"
 /*
 * PLAYER
 */
+
 player_setup :: proc(e: ^Entity) {
 	e.pos.x = -75
 	e.pos.y = 45
@@ -12,13 +13,14 @@ player_setup :: proc(e: ^Entity) {
 	e.collision.rectangle = rl.Rectangle {
 		x      = e.pos.x,
 		y      = e.pos.y,
-		width  = 15,
-		height = 15,
+		width  = 15.0,
+		height = 15.0,
 	}
 	e.collision.offset = .CENTER
 	e.collision.is_active = true
 	e.animation = init_player_run_animation()
 	e.has_physics = true
+	e.scale = 0.35
 }
 
 
@@ -26,9 +28,14 @@ player_update :: proc(e: ^Entity) {
 	fmt.assertf(e != nil, "player missing", e)
 	PLAYER_JUMP_FORCE :: -250
 
-	if rl.IsKeyPressed(.SPACE) {
+	if rl.IsKeyPressed(.SPACE) && e.is_on_ground {
 		e.velocity.y = PLAYER_JUMP_FORCE // negative because the world is drawn from top to.CENTER
+		e.animation = init_player_jump_animation()
 		e.is_on_ground = false
+	} else if rl.IsKeyPressed(.SPACE) && !e.is_on_ground {
+		e.animation = init_player_rocket_animation()
+	} else if (e.velocity.y > 0 && e.animation.kind != .ROCKET) {
+		e.animation = init_player_fall_animation()
 	}
 
 	if e.has_physics {
@@ -54,9 +61,11 @@ player_update :: proc(e: ^Entity) {
 		}
 	})
 }
+
 player_on_collide_ground :: proc(player: ^Entity, ground: ^Entity) {
 	player.is_on_ground = true
 	player.velocity.y = 0
+	player.animation = init_player_run_animation()
 	entity_move_and_slide(player, ground)
 }
 
@@ -76,12 +85,42 @@ init_player_idle_animation :: proc() -> Animation {
 }
 init_player_run_animation :: proc() -> Animation {
 	return Animation {
-		texture = rl.LoadTexture("assets/cat_run.png"),
+		texture = rl.LoadTexture("assets/CorgiRun.png"),
 		frame_count = 4,
 		frame_timer = 0,
 		current_frame = 0,
 		frame_length = 0.1,
 		kind = .RUN,
+	}
+}
+init_player_jump_animation :: proc() -> Animation {
+	return Animation {
+		texture = rl.LoadTexture("assets/CorgiJump.png"),
+		frame_count = 1,
+		frame_timer = 0,
+		current_frame = 0,
+		frame_length = 0.1,
+		kind = .JUMP,
+	}
+}
+init_player_fall_animation :: proc() -> Animation {
+	return Animation {
+		texture = rl.LoadTexture("assets/CorgiFall.png"),
+		frame_count = 1,
+		frame_timer = 0,
+		current_frame = 0,
+		frame_length = 0.1,
+		kind = .FALL,
+	}
+}
+init_player_rocket_animation :: proc() -> Animation {
+	return Animation {
+		texture = rl.LoadTexture("assets/CorgiRocketFire.png"),
+		frame_count = 2,
+		frame_timer = 0,
+		current_frame = 0,
+		frame_length = 0.1,
+		kind = .ROCKET,
 	}
 }
 
