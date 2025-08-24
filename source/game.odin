@@ -106,11 +106,6 @@ game_camera :: proc() -> rl.Camera2D {
 	
 	target : rl.Vector2 = player.pos if ok else rl.Vector2(0)
 
-	if rl.IsKeyPressed(.SPACE){ 
-		game_state.is_screen_shaking = true
-		game_state.screen_shake_timeElapsed = game_state.screen_shake_time
-	}
-
 	if game_state.is_screen_shaking { 
 		screen_shake(&target) 
 	}
