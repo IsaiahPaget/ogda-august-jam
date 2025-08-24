@@ -57,7 +57,7 @@ GameState :: struct {
 	entities:                 [MAX_ENTITIES]Entity,
 	entity_free_list:         [dynamic]int,
 	// Scenes
-	scenes:                   [dynamic]Scene,
+	scene_kind:               SceneKind,
 	// Stuff
 	player_handle:            Handle,
 	run:                      bool,
@@ -280,7 +280,7 @@ update :: proc() {
 		}
 	}
 
-	switch scene_get().kind {
+	switch game_state.scene_kind {
 	case .GAME:
 		game_scene_update()
 	case .MAIN_MENU:
@@ -387,11 +387,6 @@ game_init :: proc() {
 	game_state = new(GameState)
 	game_state^ = GameState {
 		run = true,
-		screen_shake_time = 4.0,
-		screen_shake_dropOff = 5.1,
-		screen_shake_speed = 40.0,
-		current_speed = DEFAULT_MOVE_SPEED,
-		target_speed = DEFAULT_MOVE_SPEED,
 		textures = {
 			// Load all textures
 			// WARNING: if you add a texture you MUST also unload it game_shutdown
@@ -430,9 +425,7 @@ game_init :: proc() {
 	}
 
 
-	if len(game_state.scenes) == 0 {
-		scene_push(.MAIN_MENU)
-	}
+	scene_setup(.MAIN_MENU)
 
 	game_hot_reloaded(game_state)
 }
@@ -470,7 +463,6 @@ game_shutdown :: proc() {
 	rl.UnloadTexture(game_state.textures.parasol_bounce)
 	rl.UnloadTexture(game_state.textures.jump_poof)
 
-	delete(game_state.scenes) // free the scenes array
 	delete(game_state.entity_free_list) // free the entity freelist
 	free(game_state)
 }

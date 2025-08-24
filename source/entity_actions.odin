@@ -27,7 +27,7 @@ player_setup :: proc(e: ^Entity) {
 	entity_create(.PLAYER_HEALTH_BAR)
 	e.scale = 0.35
 	e.cur_rockets = 3
-	e.z_index = 2
+	e.z_index = 3
 }
 
 
@@ -45,7 +45,7 @@ player_update :: proc(e: ^Entity) {
 	}
 
 	if e.pos.x < TOO_SLOW {
-		scene_pop()
+		scene_setup(.MAIN_MENU)
 	}
 
 	if e.pos.x > TOO_FAST {
@@ -79,7 +79,7 @@ player_update :: proc(e: ^Entity) {
 
 	if e.cur_health <= 0 {
 		rl.PlaySound(game_state.sounds.game_over)
-		scene_pop()
+		scene_setup(.MAIN_MENU)
 	}
 
 	e.cur_health -= SUN_DAMAGE * rl.GetFrameTime()
@@ -217,7 +217,7 @@ init_player_rocket_animation :: proc() -> Animation {
 */
 
 crab_spawner_setup :: proc(e: ^Entity) {
-
+	e.z_index = 0
 	e.spawner_interval_s = 3
 }
 
@@ -243,7 +243,7 @@ crab_spawner_draw :: proc(e: Entity) {
 */
 crab_setup :: proc(e: ^Entity) {
 	e.animation = init_crab_run_anim()
-	e.z_index = 3
+	e.z_index = 4
 	e.lifespan_s = 10
 	e.texture_offset = .BOTTOM
 	e.collision.rectangle = rl.Rectangle {
@@ -343,6 +343,7 @@ background_setup :: proc(e: ^Entity) {
 	e.pos.x = -50
 	e.texture_offset = .CENTER
 	e.animation = init_background_anim()
+	e.z_index = 0
 }
 background_update :: proc(e: ^Entity) {
 	MOVE_SPEED_MULTIPLIER :: 0.8
@@ -377,6 +378,7 @@ foreground_setup :: proc(e: ^Entity) {
 	e.pos.x = -50
 	e.texture_offset = .CENTER
 	e.animation = init_foreground_anim()
+	e.z_index = 2
 }
 
 foreground_update :: proc(e: ^Entity) {
@@ -420,6 +422,7 @@ ground_setup :: proc(e: ^Entity) {
 	}
 	e.collision.offset = .CENTER
 	e.collision.is_active = true
+	e.z_index = 1
 }
 
 ground_update :: proc(e: ^Entity) {
@@ -455,10 +458,11 @@ init_ground_anim :: proc() -> Animation {
 play_button_setup :: proc(e: ^Entity) {
 	e.pos.x = -100
 	e.pos.y = -40
+	e.z_index = 5
 }
 play_button_update :: proc(e: ^Entity) {
 	if rl.IsKeyPressed(.ENTER) {
-		scene_push(.GAME)
+		scene_setup(.GAME)
 	}
 }
 play_button_draw :: proc(e: Entity) {
@@ -482,6 +486,7 @@ sun_setup :: proc(e: ^Entity) {
 	e.pos.y = -50
 	e.scale = 0.25
 	e.animation = init_sun_anim()
+	e.z_index = 1
 }
 
 sun_update :: proc(e: ^Entity) {
@@ -508,6 +513,7 @@ player_health_bar_setup :: proc(e: ^Entity) {
 	e.pos.y = -60
 	e.scale = 0.25
 	e.health_bar_max_width = 50
+	e.z_index = 5
 }
 
 player_health_bar_update :: proc(e: ^Entity) {
@@ -558,6 +564,7 @@ init_jump_poof_anim :: proc() -> Animation {
 */
 
 towel_spawner_setup :: proc(e: ^Entity) {
+	e.z_index = 0
 	e.spawner_interval_s = 3
 }
 
@@ -592,6 +599,7 @@ towel_setup :: proc(e: ^Entity) {
 	e.collision.offset = .BOTTOM
 	e.collision.is_active = true
 	e.scale = 0.75
+	e.z_index = 4
 }
 
 towel_draw :: proc(e: Entity) {
@@ -631,6 +639,7 @@ init_towel_idle_anim :: proc() -> Animation {
 */
 
 pidgeon_spawner_setup :: proc(e: ^Entity) {
+	e.z_index = 0
 	e.spawner_interval_s = 3
 }
 
@@ -666,6 +675,7 @@ pidgeon_setup :: proc(e: ^Entity) {
 	e.collision.is_active = true
 	e.scale = 0.75
 	e.animation.flip_x = true
+	e.z_index = 4
 }
 
 pidgeon_draw :: proc(e: Entity) {
@@ -700,6 +710,7 @@ init_pidgeon_fly_anim :: proc() -> Animation {
 */
 
 parasol_spawner_setup :: proc(e: ^Entity) {
+	e.z_index = 0
 	e.spawner_interval_s = 3
 }
 
@@ -733,6 +744,7 @@ parasol_setup :: proc(e: ^Entity) {
 	e.collision.offset = .CENTER
 	e.collision.is_active = true
 	e.scale = 0.5
+	e.z_index = 4
 }
 
 parasol_draw :: proc(e: Entity) {
