@@ -24,6 +24,7 @@ EntityKind :: enum {
 	PIDGEON_SPAWNER,
 	PARASOL,
 	PARASOL_SPAWNER,
+	JUMP_POOF,
 }
 
 EntityTextureOffset :: enum {
@@ -247,5 +248,7 @@ entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 		parasol_setup(e)
 	case .PARASOL_SPAWNER:
 		parasol_spawner_setup(e)
+	case .JUMP_POOF:
+		jump_poof_setup(e)
 	}
 }

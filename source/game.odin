@@ -33,7 +33,7 @@ import "core:math/linalg"
 import rl "vendor:raylib"
 
 PIXEL_WINDOW_HEIGHT :: 180
-DEBUG :: true
+DEBUG :: false
 SCREEN_WIDTH :: 1280
 SCREEN_HEIGHT :: 720
 GRAVITY :: 1000
@@ -96,6 +96,7 @@ Textures :: struct {
 	pidgeon_flying:      rl.Texture2D,
 	parasol:             rl.Texture2D,
 	parasol_bounce:      rl.Texture2D,
+	jump_poof:           rl.Texture2D,
 }
 
 game_state: ^GameState
@@ -259,6 +260,8 @@ update :: proc() {
 			parasol_update(e)
 		case .PARASOL_SPAWNER:
 			parasol_spawner_update(e)
+		case .JUMP_POOF:
+			jump_poof_update(e)
 		}
 	}
 
@@ -318,6 +321,8 @@ draw :: proc() {
 			parasol_draw(e^)
 		case .PARASOL_SPAWNER:
 			parasol_spawner_draw(e^)
+		case .JUMP_POOF:
+			jump_poof_draw(e^)
 		}
 	}
 
@@ -392,6 +397,7 @@ game_init :: proc() {
 			pidgeon_flying      = rl.LoadTexture("assets/pidgeon_flying.png"),
 			parasol             = rl.LoadTexture("assets/parasol.png"),
 			parasol_bounce      = rl.LoadTexture("assets/parasol-bounce.png"),
+			jump_poof           = rl.LoadTexture("assets/jump-poof.png"),
 		},
 	}
 
@@ -434,6 +440,7 @@ game_shutdown :: proc() {
 	rl.UnloadTexture(game_state.textures.pidgeon_flying)
 	rl.UnloadTexture(game_state.textures.parasol)
 	rl.UnloadTexture(game_state.textures.parasol_bounce)
+	rl.UnloadTexture(game_state.textures.jump_poof)
 
 	delete(game_state.scenes) // free the scenes array
 	delete(game_state.entity_free_list) // free the entity freelist

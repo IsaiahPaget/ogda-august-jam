@@ -55,6 +55,8 @@ player_update :: proc(e: ^Entity) {
 	if rl.IsKeyPressed(.SPACE) && e.is_on_ground {
 		e.velocity.y = PLAYER_JUMP_FORCE // negative because the world is drawn from top to.CENTER
 		e.animation = init_player_jump_animation()
+		poof := entity_create(.JUMP_POOF)
+		poof.pos = e.pos
 		e.is_on_ground = false
 	} else if rl.IsKeyPressed(.SPACE) && !e.is_on_ground && e.cur_rockets > 0 {
 		e.animation = init_player_rocket_animation()
@@ -95,6 +97,7 @@ player_update :: proc(e: ^Entity) {
 		case .BACKGROUND:
 		case .SUN:
 		case .PLAYER_HEALTH_BAR:
+		case .JUMP_POOF:
 		case .PARASOL_SPAWNER:
 		case .PARASOL:
 			player_on_collide_parasol(entity_a,entity_b)
@@ -110,7 +113,7 @@ player_update :: proc(e: ^Entity) {
 
 player_on_collide_parasol :: proc(player, parasol: ^Entity) {
 	if player.velocity.y > 0 && player.pos.y < parasol.pos.y - 14{ // because remember it's flipped on the Y
-		player.velocity.y += -200
+		player.velocity.y += -500 // needs to be high to overcome gravity
 		player.animation = init_player_jump_animation()
 	}
 	parasol.animation = init_parasol_bounce_anim()
@@ -215,7 +218,8 @@ crab_spawner_setup :: proc(e: ^Entity) {
 }
 
 crab_spawner_update :: proc(e: ^Entity) {
-	if rl.GetTime() - e.last_spawn_s >= rand.float64_range(0.5, 5) {
+	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
+		e.spawner_interval_s = rand.float64_range(0.5, 2)
 		crab := entity_create(.CRAB)
 		crab.pos = rl.Vector2{300, 20}
 		crab.collision.rectangle.x = 110
@@ -279,6 +283,7 @@ crab_update :: proc(e: ^Entity) {
 		case .PLAY_BUTTON:
 		case .PLAYER:
 		case .CRAB_SPAWNER:
+		case .JUMP_POOF:
 		case .BACKGROUND:
 		case .SUN:
 		case .PLAYER_HEALTH_BAR:
@@ -511,6 +516,38 @@ player_health_bar_draw :: proc(e: Entity) {
 	rl.DrawRectangleV(e.pos, rl.Vector2{e.health_bar_width, 20}, rl.RED)
 }
 
+/*
+* PLAYER JUMP POOF
+*/
+jump_poof_setup :: proc(e: ^Entity) {
+	e.animation = init_jump_poof_anim()
+	e.scale = .5
+	e.lifespan_s = .3
+	e.texture_offset = .CENTER
+	e.z_index = 10
+}
+
+jump_poof_update :: proc(e: ^Entity) {
+	if rl.GetTime() - e.created_on >= e.lifespan_s {
+		entity_destroy(e)
+	}
+
+	e.velocity.x = game_state.current_speed
+	e.pos += e.velocity * rl.GetFrameTime()
+}
+jump_poof_draw :: proc(e: Entity) {
+	entity_draw_default(e)
+}
+
+init_jump_poof_anim :: proc() -> Animation {
+	return Animation {
+		texture = game_state.textures.jump_poof,
+		frame_count = 3,
+		frame_length = .1,
+		kind = .IDLE,
+	}
+}
+
 
 /*
 * TOWEL SPAWNER
@@ -521,7 +558,8 @@ towel_spawner_setup :: proc(e: ^Entity) {
 }
 
 towel_spawner_update :: proc(e: ^Entity) {
-	if rl.GetTime() - e.last_spawn_s >= rand.float64_range(2, 10) {
+	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
+		e.spawner_interval_s = rand.float64_range(1, 3)
 		towel := entity_create(.TOWEL)
 		towel.pos = rl.Vector2{300, 70}
 		towel.collision.rectangle.x = 110
@@ -589,12 +627,14 @@ init_towel_idle_anim :: proc() -> Animation {
 */
 
 pidgeon_spawner_setup :: proc(e: ^Entity) {
+	e.spawner_interval_s = 3
 }
 
 pidgeon_spawner_update :: proc(e: ^Entity) {
-	if rl.GetTime() - e.last_spawn_s >= rand.float64_range(2, 10) {
+	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
+		e.spawner_interval_s = rand.float64_range(0.5, 2)
 		pidgeon := entity_create(.PIDGEON)
-		pidgeon.pos = rl.Vector2{300, rand.float32_range(-20, 30)}
+		pidgeon.pos = rl.Vector2{300, rand.float32_range(-60, 30)}
 		pidgeon.collision.rectangle.x = 300
 		pidgeon.collision.rectangle.y = 10
 		e.last_spawn_s = rl.GetTime()
@@ -656,10 +696,12 @@ init_pidgeon_fly_anim :: proc() -> Animation {
 */
 
 parasol_spawner_setup :: proc(e: ^Entity) {
+	e.spawner_interval_s = 3
 }
 
 parasol_spawner_update :: proc(e: ^Entity) {
-	if rl.GetTime() - e.last_spawn_s >= rand.float64_range(2, 7) {
+	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
+		e.spawner_interval_s = rand.float64_range(0.5, 2)
 		parasol := entity_create(.PARASOL)
 		parasol.pos = rl.Vector2{300, 30}
 		parasol.collision.rectangle.x = 300
