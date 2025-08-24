@@ -37,8 +37,10 @@ DEBUG :: false
 SCREEN_WIDTH :: 1280
 SCREEN_HEIGHT :: 720
 GRAVITY :: 1000
-TARGET_MOVE_SPEED :: -150 // negative because world is moving not player
+DEFAULT_MOVE_SPEED :: -150 // negative because world is moving not player
 SUN_DAMAGE :: 5
+TOO_SLOW :: -200 // this is the position on the world that means you are too far back
+TOO_FAST :: 150 // this point you should not exceed
 // GLSL_VERSION :: 330
 
 Handle :: struct {
@@ -69,8 +71,32 @@ GameState :: struct {
 	screen_shake_dropOff:     f64,
 	screen_shake_speed:       f64,
 	// player move speed, but really the world
-	move_speed:               f32,
+	current_speed:            f32,
+	target_speed:             f32,
 	total_distance_metres:    int,
+	textures:                 Textures,
+}
+
+// WARNING: if you add a texture you MUST also unload it game_shutdown
+Textures :: struct {
+	rocket_icon_powerup: rl.Texture2D,
+	round_cat:           rl.Texture2D,
+	corgi_run:           rl.Texture2D,
+	corgi_jump:          rl.Texture2D,
+	corgi_fall:          rl.Texture2D,
+	corgi_rocket_fire:   rl.Texture2D,
+	crab_run:            rl.Texture2D,
+	background:          rl.Texture2D,
+	foreground:          rl.Texture2D,
+	ground:              rl.Texture2D,
+	sun:                 rl.Texture2D,
+	towel_green:         rl.Texture2D,
+	towel_red:           rl.Texture2D,
+	towel_yellow:        rl.Texture2D,
+	pidgeon_flying:      rl.Texture2D,
+	parasol:             rl.Texture2D,
+	parasol_bounce:      rl.Texture2D,
+	jump_poof:           rl.Texture2D,
 }
 
 game_state: ^GameState
@@ -85,6 +111,21 @@ rebuild_scratch :: proc() {
 		if !entity_is_valid(e) do continue
 		append(&all_ents, e.handle)
 	}
+	// Greedy selection sort by z
+	for i in 0 ..< len(all_ents) {
+		min_index := i
+		for j in i + 1 ..< len(all_ents) {
+			ea := entity_get(all_ents[j])
+			em := entity_get(all_ents[min_index])
+			if ea.z_index < em.z_index {
+				min_index = j
+			}
+		}
+		if min_index != i {
+			all_ents[i], all_ents[min_index] = all_ents[min_index], all_ents[i]
+		}
+	}
+	// Sort entities by their z value (lower z drawn first, higher on top)
 	game_state.scratch.all_entities = all_ents[:]
 }
 
@@ -92,7 +133,10 @@ get_player :: proc() -> (player: ^Entity, ok: bool) #optional_ok {
 	return entity_get(game_state.player_handle)
 }
 
-do_screen_shake :: proc() {
+do_screen_shake :: proc(time_s, drop_off, speed: f64) {
+	game_state.screen_shake_time = time_s
+	game_state.screen_shake_dropOff = drop_off
+	game_state.screen_shake_speed = speed
 	game_state.is_screen_shaking = true
 	game_state.screen_shake_timeElapsed = game_state.screen_shake_time
 }
@@ -134,7 +178,7 @@ ui_camera :: proc() -> rl.Camera2D {
 
 // positive number is a speed up and vica versa
 change_speed :: proc(amount: f32) {
-	game_state.move_speed -= amount
+	game_state.target_speed -= amount * rl.GetFrameTime()
 }
 
 input_dir_normalized :: proc() -> rl.Vector2 {
@@ -160,19 +204,16 @@ input_dir_normalized :: proc() -> rl.Vector2 {
 
 game_scene_update :: proc() {
 	game_state.total_distance_metres =
-		int(game_state.move_speed * f32(rl.GetTime() / 144) * 10) * -1 // because the world is moving backwards
-	if game_state.move_speed > TARGET_MOVE_SPEED {
-		if game_state.move_speed > TARGET_MOVE_SPEED + 10 {
-			game_state.move_speed = TARGET_MOVE_SPEED
-		}
-		game_state.move_speed *= 1.1 // higher because remember its the world moving in the -x direction
-	}
-	if game_state.move_speed < TARGET_MOVE_SPEED {
-		if game_state.move_speed < TARGET_MOVE_SPEED + 10 {
-			game_state.move_speed = TARGET_MOVE_SPEED
-		}
-		game_state.move_speed *= 0.9
-	}
+		int(game_state.current_speed * f32(rl.GetTime() / 144) * 10) * -1 // because the world is moving backwards
+
+	SPEED_ADJUSTMENT_RATE: f32 = 0.01
+
+	// Smoothly move current_speed towards target_speed
+	game_state.current_speed = math.lerp(
+		game_state.current_speed,
+		game_state.target_speed,
+		SPEED_ADJUSTMENT_RATE,
+	)
 }
 
 update :: proc() {
@@ -207,6 +248,20 @@ update :: proc() {
 			sun_update(e)
 		case .PLAYER_HEALTH_BAR:
 			player_health_bar_update(e)
+		case .TOWEL_SPAWNER:
+			towel_spawner_update(e)
+		case .TOWEL:
+			towel_update(e)
+		case .PIDGEON_SPAWNER:
+			pidgeon_spawner_update(e)
+		case .PIDGEON:
+			pidgeon_update(e)
+		case .PARASOL:
+			parasol_update(e)
+		case .PARASOL_SPAWNER:
+			parasol_spawner_update(e)
+		case .JUMP_POOF:
+			jump_poof_update(e)
 		}
 	}
 
@@ -236,8 +291,6 @@ draw :: proc() {
 
 		switch e.kind {
 		case .NIL:
-		case .PLAYER:
-			player_draw(e^)
 		case .CRAB:
 			crab_draw(e^)
 		case .GROUND:
@@ -254,6 +307,22 @@ draw :: proc() {
 			sun_draw(e^)
 		case .PLAYER_HEALTH_BAR:
 			player_health_bar_draw(e^)
+		case .TOWEL_SPAWNER:
+			towel_spawner_draw(e^)
+		case .TOWEL:
+			towel_draw(e^)
+		case .PLAYER:
+			player_draw(e^)
+		case .PIDGEON_SPAWNER:
+			pidgeon_spawner_draw(e^)
+		case .PIDGEON:
+			pidgeon_draw(e^)
+		case .PARASOL:
+			parasol_draw(e^)
+		case .PARASOL_SPAWNER:
+			parasol_spawner_draw(e^)
+		case .JUMP_POOF:
+			jump_poof_draw(e^)
 		}
 	}
 
@@ -302,12 +371,36 @@ game_init :: proc() {
 	entity_init_core() // Initialize the safe default entity
 	game_state = new(GameState)
 	game_state^ = GameState {
-		run                  = true,
-		screen_shake_time    = 4.0,
+		run = true,
+		screen_shake_time = 4.0,
 		screen_shake_dropOff = 5.1,
-		screen_shake_speed   = 40.0,
-		move_speed           = -100,
+		screen_shake_speed = 40.0,
+		current_speed = DEFAULT_MOVE_SPEED,
+		target_speed = DEFAULT_MOVE_SPEED,
+		textures = {
+			// Load all textures
+			// WARNING: if you add a texture you MUST also unload it game_shutdown
+			rocket_icon_powerup = rl.LoadTexture("assets/rocket-icon-powerup.png"),
+			round_cat           = rl.LoadTexture("assets/round_cat.png"),
+			corgi_run           = rl.LoadTexture("assets/CorgiRun.png"),
+			corgi_jump          = rl.LoadTexture("assets/CorgiJump.png"),
+			corgi_fall          = rl.LoadTexture("assets/CorgiFall.png"),
+			corgi_rocket_fire   = rl.LoadTexture("assets/CorgiRocketFire.png"),
+			crab_run            = rl.LoadTexture("assets/crab/crab_run.png"),
+			background          = rl.LoadTexture("assets/ground/background.png"),
+			foreground          = rl.LoadTexture("assets/ground/foreground.png"),
+			ground              = rl.LoadTexture("assets/ground/ground.png"),
+			sun                 = rl.LoadTexture("assets/sun.png"),
+			towel_green         = rl.LoadTexture("assets/GreenTowel.png"),
+			towel_red           = rl.LoadTexture("assets/RedTowel.png"),
+			towel_yellow        = rl.LoadTexture("assets/YellowTowel.png"),
+			pidgeon_flying      = rl.LoadTexture("assets/pidgeon_flying.png"),
+			parasol             = rl.LoadTexture("assets/parasol.png"),
+			parasol_bounce      = rl.LoadTexture("assets/parasol-bounce.png"),
+			jump_poof           = rl.LoadTexture("assets/jump-poof.png"),
+		},
 	}
+
 
 	if len(game_state.scenes) == 0 {
 		scene_push(.MAIN_MENU)
@@ -327,9 +420,28 @@ game_should_run :: proc() -> bool {
 
 	return game_state.run
 }
-
 @(export)
 game_shutdown :: proc() {
+	// Unload all textures
+	rl.UnloadTexture(game_state.textures.rocket_icon_powerup)
+	rl.UnloadTexture(game_state.textures.round_cat)
+	rl.UnloadTexture(game_state.textures.corgi_run)
+	rl.UnloadTexture(game_state.textures.corgi_jump)
+	rl.UnloadTexture(game_state.textures.corgi_fall)
+	rl.UnloadTexture(game_state.textures.corgi_rocket_fire)
+	rl.UnloadTexture(game_state.textures.crab_run)
+	rl.UnloadTexture(game_state.textures.background)
+	rl.UnloadTexture(game_state.textures.foreground)
+	rl.UnloadTexture(game_state.textures.ground)
+	rl.UnloadTexture(game_state.textures.sun)
+	rl.UnloadTexture(game_state.textures.towel_green)
+	rl.UnloadTexture(game_state.textures.towel_red)
+	rl.UnloadTexture(game_state.textures.towel_yellow)
+	rl.UnloadTexture(game_state.textures.pidgeon_flying)
+	rl.UnloadTexture(game_state.textures.parasol)
+	rl.UnloadTexture(game_state.textures.parasol_bounce)
+	rl.UnloadTexture(game_state.textures.jump_poof)
+
 	delete(game_state.scenes) // free the scenes array
 	delete(game_state.entity_free_list) // free the entity freelist
 	free(game_state)

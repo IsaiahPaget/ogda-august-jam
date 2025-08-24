@@ -18,6 +18,13 @@ EntityKind :: enum {
 	CRAB_SPAWNER,
 	SUN,
 	PLAYER_HEALTH_BAR,
+	TOWEL,
+	TOWEL_SPAWNER,
+	PIDGEON,
+	PIDGEON_SPAWNER,
+	PARASOL,
+	PARASOL_SPAWNER,
+	JUMP_POOF,
 }
 
 EntityTextureOffset :: enum {
@@ -33,6 +40,7 @@ Entity :: struct {
 	kind:                 EntityKind,
 	collision:            CollisionShape,
 	pos:                  rl.Vector2,
+	z_index:              int,
 	velocity:             rl.Vector2,
 	rotation:             f32,
 	scale:                f32,
@@ -48,11 +56,17 @@ Entity :: struct {
 	last_spawn_s:         f64, // since game init
 	spawner_interval_s:   f64,
 
-	// Player
+	// PLAYER
 	cur_health:           f32,
 	max_health:           f32,
 	health_bar_width:     f32,
 	health_bar_max_width: f32,
+	cur_rockets:          int,
+	max_rockets:          int,
+
+	// PARASOL
+	last_bounce_s:        f64,
+	is_bounce:            bool,
 }
 
 
@@ -63,7 +77,7 @@ entity_draw_default :: proc(e: Entity) {
 		x      = offset.x,
 		y      = offset.y,
 		width  = f32(texture.width) * e.scale / f32(e.animation.frame_count),
-		height = f32(texture.height)* e.scale,
+		height = f32(texture.height) * e.scale,
 	}
 
 	src := get_source_rect(e.animation)
@@ -82,10 +96,13 @@ entity_draw_default :: proc(e: Entity) {
 get_texture_position :: proc(e: Entity) -> rl.Vector2 {
 	texture_width := f32(e.animation.texture.width / i32(e.animation.frame_count))
 	texture_height := f32(e.animation.texture.height)
-	
+
 	switch e.texture_offset {
 	case .CENTER:
-		return rl.Vector2{e.pos.x - texture_width / 2 * e.scale, e.pos.y - texture_height / 2 * e.scale}
+		return rl.Vector2 {
+			e.pos.x - texture_width / 2 * e.scale,
+			e.pos.y - texture_height / 2 * e.scale,
+		}
 	case .TOP:
 		return rl.Vector2{e.pos.x - texture_width / 2 * e.scale, e.pos.y}
 	case .BOTTOM:
@@ -219,5 +236,19 @@ entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 		sun_setup(e)
 	case .PLAYER_HEALTH_BAR:
 		player_health_bar_setup(e)
+	case .TOWEL:
+		towel_setup(e)
+	case .TOWEL_SPAWNER:
+		towel_spawner_setup(e)
+	case .PIDGEON:
+		pidgeon_setup(e)
+	case .PIDGEON_SPAWNER:
+		pidgeon_spawner_setup(e)
+	case .PARASOL:
+		parasol_setup(e)
+	case .PARASOL_SPAWNER:
+		parasol_spawner_setup(e)
+	case .JUMP_POOF:
+		jump_poof_setup(e)
 	}
 }
