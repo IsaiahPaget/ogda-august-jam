@@ -49,6 +49,7 @@ game_setup :: proc() {
 
 	entity_create(.SUN)
 	entity_create(.CRAB_SPAWNER)
+	entity_create(.TOWEL_SPAWNER)
 }
 
 game_transition :: proc(scene: ^Scene) {

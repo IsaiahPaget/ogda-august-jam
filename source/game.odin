@@ -33,7 +33,7 @@ import "core:math/linalg"
 import rl "vendor:raylib"
 
 PIXEL_WINDOW_HEIGHT :: 180
-DEBUG :: true
+DEBUG :: false
 SCREEN_WIDTH :: 1280
 SCREEN_HEIGHT :: 720
 GRAVITY :: 1000
@@ -90,6 +90,9 @@ Textures :: struct {
 	foreground:          rl.Texture2D,
 	ground:              rl.Texture2D,
 	sun:                 rl.Texture2D,
+	towel_green:         rl.Texture2D,
+	towel_red:           rl.Texture2D,
+	towel_yellow:        rl.Texture2D,
 }
 
 game_state: ^GameState
@@ -104,6 +107,21 @@ rebuild_scratch :: proc() {
 		if !entity_is_valid(e) do continue
 		append(&all_ents, e.handle)
 	}
+	// Greedy selection sort by z
+	for i in 0 ..< len(all_ents) {
+		min_index := i
+		for j in i + 1 ..< len(all_ents) {
+			ea := entity_get(all_ents[j])
+			em := entity_get(all_ents[min_index])
+			if ea.z_index < em.z_index {
+				min_index = j
+			}
+		}
+		if min_index != i {
+			all_ents[i], all_ents[min_index] = all_ents[min_index], all_ents[i]
+		}
+	}
+	// Sort entities by their z value (lower z drawn first, higher on top)
 	game_state.scratch.all_entities = all_ents[:]
 }
 
@@ -223,6 +241,10 @@ update :: proc() {
 			sun_update(e)
 		case .PLAYER_HEALTH_BAR:
 			player_health_bar_update(e)
+		case .TOWEL_SPAWNER:
+			towel_spawner_update(e)
+		case .TOWEL:
+			towel_update(e)
 		}
 	}
 
@@ -252,8 +274,6 @@ draw :: proc() {
 
 		switch e.kind {
 		case .NIL:
-		case .PLAYER:
-			player_draw(e^)
 		case .CRAB:
 			crab_draw(e^)
 		case .GROUND:
@@ -270,6 +290,12 @@ draw :: proc() {
 			sun_draw(e^)
 		case .PLAYER_HEALTH_BAR:
 			player_health_bar_draw(e^)
+		case .TOWEL_SPAWNER:
+			towel_spawner_draw(e^)
+		case .TOWEL:
+			towel_draw(e^)
+		case .PLAYER:
+			player_draw(e^)
 		}
 	}
 
@@ -318,26 +344,29 @@ game_init :: proc() {
 	entity_init_core() // Initialize the safe default entity
 	game_state = new(GameState)
 	game_state^ = GameState {
-		run                  = true,
-		screen_shake_time    = 4.0,
+		run = true,
+		screen_shake_time = 4.0,
 		screen_shake_dropOff = 5.1,
-		screen_shake_speed   = 40.0,
-		current_speed        = DEFAULT_MOVE_SPEED,
-		target_speed         = DEFAULT_MOVE_SPEED,
+		screen_shake_speed = 40.0,
+		current_speed = DEFAULT_MOVE_SPEED,
+		target_speed = DEFAULT_MOVE_SPEED,
 		textures = {
 			// Load all textures
 			// WARNING: if you add a texture you MUST also unload it game_shutdown
 			rocket_icon_powerup = rl.LoadTexture("assets/rocket-icon-powerup.png"),
-			round_cat = rl.LoadTexture("assets/round_cat.png"),
-			corgi_run = rl.LoadTexture("assets/CorgiRun.png"),
-			corgi_jump = rl.LoadTexture("assets/CorgiJump.png"),
-			corgi_fall = rl.LoadTexture("assets/CorgiFall.png"),
-			corgi_rocket_fire = rl.LoadTexture("assets/CorgiRocketFire.png"),
-			crab_run = rl.LoadTexture("assets/crab/crab_run.png"),
-			background = rl.LoadTexture("assets/ground/background.png"),
-			foreground = rl.LoadTexture("assets/ground/foreground.png"),
-			ground = rl.LoadTexture("assets/ground/ground.png"),
-			sun = rl.LoadTexture("assets/sun.png"),
+			round_cat           = rl.LoadTexture("assets/round_cat.png"),
+			corgi_run           = rl.LoadTexture("assets/CorgiRun.png"),
+			corgi_jump          = rl.LoadTexture("assets/CorgiJump.png"),
+			corgi_fall          = rl.LoadTexture("assets/CorgiFall.png"),
+			corgi_rocket_fire   = rl.LoadTexture("assets/CorgiRocketFire.png"),
+			crab_run            = rl.LoadTexture("assets/crab/crab_run.png"),
+			background          = rl.LoadTexture("assets/ground/background.png"),
+			foreground          = rl.LoadTexture("assets/ground/foreground.png"),
+			ground              = rl.LoadTexture("assets/ground/ground.png"),
+			sun                 = rl.LoadTexture("assets/sun.png"),
+			towel_green         = rl.LoadTexture("assets/GreenTowel.png"),
+			towel_red           = rl.LoadTexture("assets/RedTowel.png"),
+			towel_yellow        = rl.LoadTexture("assets/YellowTowel.png"),
 		},
 	}
 
@@ -374,6 +403,9 @@ game_shutdown :: proc() {
 	rl.UnloadTexture(game_state.textures.foreground)
 	rl.UnloadTexture(game_state.textures.ground)
 	rl.UnloadTexture(game_state.textures.sun)
+	rl.UnloadTexture(game_state.textures.towel_green)
+	rl.UnloadTexture(game_state.textures.towel_red)
+	rl.UnloadTexture(game_state.textures.towel_yellow)
 
 	delete(game_state.scenes) // free the scenes array
 	delete(game_state.entity_free_list) // free the entity freelist

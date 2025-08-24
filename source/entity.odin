@@ -18,6 +18,8 @@ EntityKind :: enum {
 	CRAB_SPAWNER,
 	SUN,
 	PLAYER_HEALTH_BAR,
+	TOWEL,
+	TOWEL_SPAWNER,
 }
 
 EntityTextureOffset :: enum {
@@ -33,6 +35,7 @@ Entity :: struct {
 	kind:                 EntityKind,
 	collision:            CollisionShape,
 	pos:                  rl.Vector2,
+	z_index:              int,
 	velocity:             rl.Vector2,
 	rotation:             f32,
 	scale:                f32,
@@ -224,5 +227,9 @@ entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 		sun_setup(e)
 	case .PLAYER_HEALTH_BAR:
 		player_health_bar_setup(e)
+	case .TOWEL:
+		towel_setup(e)
+	case .TOWEL_SPAWNER:
+		towel_spawner_setup(e)
 	}
 }

@@ -27,6 +27,7 @@ player_setup :: proc(e: ^Entity) {
 	entity_create(.PLAYER_HEALTH_BAR)
 	e.scale = 0.35
 	e.cur_rockets = 3
+	e.z_index = 2
 }
 
 
@@ -57,7 +58,7 @@ player_update :: proc(e: ^Entity) {
 		e.is_on_ground = false
 	} else if rl.IsKeyPressed(.SPACE) && !e.is_on_ground && e.cur_rockets > 0 {
 		e.animation = init_player_rocket_animation()
-		e.velocity = rl.Vector2 {50, PLAYER_JUMP_FORCE} // apply up negative because world is drawn top to bottom
+		e.velocity = rl.Vector2{50, PLAYER_JUMP_FORCE} // apply up negative because world is drawn top to bottom
 		e.cur_rockets -= 1
 		do_screen_shake()
 
@@ -94,14 +95,21 @@ player_update :: proc(e: ^Entity) {
 		case .BACKGROUND:
 		case .SUN:
 		case .PLAYER_HEALTH_BAR:
+		case .TOWEL_SPAWNER:
+		case .TOWEL:
+			player_on_collide_towel(entity_a, entity_b)
 		}
 	})
+}
+
+player_on_collide_towel :: proc(player, towel: ^Entity) {
+	change_speed(50)
 }
 
 player_on_collide_crab :: proc(player, crab: ^Entity) {
 	do_screen_shake()
 	change_speed(-200)
-	entity_destroy(crab)
+	crab.velocity.y += -300
 }
 
 player_on_collide_ground :: proc(player, ground: ^Entity) {
@@ -113,13 +121,13 @@ player_on_collide_ground :: proc(player, ground: ^Entity) {
 
 player_draw :: proc(e: Entity) {
 	entity_draw_default(e)
-	
+
 	texture := game_state.textures.rocket_icon_powerup
-	for i in 0..<e.cur_rockets {
+	for i in 0 ..< e.cur_rockets {
 		rl.DrawTextureV(
-		texture,
-		rl.Vector2 {f32(-150 + (15 * i32(i))), 60}, //magic numbers don't mind me
-		rl.WHITE,
+			texture,
+			rl.Vector2{f32(-150 + (15 * i32(i))), 60}, //magic numbers don't mind me
+			rl.WHITE,
 		)
 	}
 }
@@ -205,6 +213,7 @@ crab_spawner_draw :: proc(e: Entity) {
 */
 crab_setup :: proc(e: ^Entity) {
 	e.animation = init_crab_run_anim()
+	e.z_index = 3
 	e.lifespan_s = 10
 	e.texture_offset = .BOTTOM
 	e.collision.rectangle = rl.Rectangle {
@@ -251,6 +260,8 @@ crab_update :: proc(e: ^Entity) {
 		case .BACKGROUND:
 		case .SUN:
 		case .PLAYER_HEALTH_BAR:
+		case .TOWEL:
+		case .TOWEL_SPAWNER:
 		}
 	})
 }
@@ -320,11 +331,7 @@ background_draw :: proc(e: Entity) {
 }
 
 init_background_anim :: proc() -> Animation {
-	return Animation {
-		texture = game_state.textures.background,
-		frame_count = 1,
-		kind = .NIL,
-	}
+	return Animation{texture = game_state.textures.background, frame_count = 1, kind = .NIL}
 }
 
 /*
@@ -359,11 +366,7 @@ foreground_draw :: proc(e: Entity) {
 }
 
 init_foreground_anim :: proc() -> Animation {
-	return Animation {
-		texture = game_state.textures.foreground,
-		frame_count = 1,
-		kind = .NIL,
-	}
+	return Animation{texture = game_state.textures.foreground, frame_count = 1, kind = .NIL}
 }
 
 /*
@@ -406,11 +409,7 @@ ground_draw :: proc(e: Entity) {
 }
 
 init_ground_anim :: proc() -> Animation {
-	return Animation {
-		texture = game_state.textures.ground,
-		frame_count = 1,
-		kind = .NIL,
-	}
+	return Animation{texture = game_state.textures.ground, frame_count = 1, kind = .NIL}
 }
 
 
@@ -467,7 +466,7 @@ init_sun_anim :: proc() -> Animation {
 }
 
 /*
-* player_health_bar
+* PLAYER_HEALTH_BAR
 */
 player_health_bar_setup :: proc(e: ^Entity) {
 	e.pos.x = -150
@@ -478,10 +477,83 @@ player_health_bar_setup :: proc(e: ^Entity) {
 
 player_health_bar_update :: proc(e: ^Entity) {
 	player := get_player()
-	
+
 	player_health_percent := player.cur_health / player.max_health
 	e.health_bar_width = e.health_bar_max_width * player_health_percent
 }
 player_health_bar_draw :: proc(e: Entity) {
 	rl.DrawRectangleV(e.pos, rl.Vector2{e.health_bar_width, 20}, rl.RED)
+}
+
+
+/*
+* TOWEL SPAWNER
+*/
+
+towel_spawner_setup :: proc(e: ^Entity) {
+	e.spawner_interval_s = 3
+}
+
+towel_spawner_update :: proc(e: ^Entity) {
+	if rl.GetTime() - e.last_spawn_s >= rand.float64_range(2, 10) {
+		towel := entity_create(.TOWEL)
+		towel.pos = rl.Vector2{200, 70}
+		towel.collision.rectangle.x = 110
+		towel.collision.rectangle.y = 10
+		e.last_spawn_s = rl.GetTime()
+	}
+}
+
+towel_spawner_draw :: proc(e: Entity) {
+	if DEBUG {
+		rl.DrawRectangleV(e.pos, {30, 30}, rl.ORANGE)
+	}
+}
+
+/*
+* TOWEL
+*/
+towel_setup :: proc(e: ^Entity) {
+	e.lifespan_s = 10
+	e.animation = init_towel_idle_anim()
+	e.texture_offset = .BOTTOM
+	e.collision.rectangle = rl.Rectangle {
+		width  = 50,
+		height = 15,
+	}
+	e.collision.offset = .BOTTOM
+	e.collision.is_active = true
+	e.scale = 0.75
+}
+
+towel_draw :: proc(e: Entity) {
+	entity_draw_default(e)
+}
+
+towel_update :: proc(e: ^Entity) {
+
+	MOVE_SPEED_MULTIPLIER :: 1
+
+	if rl.GetTime() - e.created_on >= e.lifespan_s {
+		entity_destroy(e)
+	}
+
+	e.velocity.x = game_state.current_speed * MOVE_SPEED_MULTIPLIER
+	e.pos += e.velocity * rl.GetFrameTime()
+
+	collision_box_update(e)
+}
+
+init_towel_idle_anim :: proc() -> Animation {
+	texture: rl.Texture2D
+	switch rl.GetRandomValue(1, 3) {
+	case 1:
+		texture = game_state.textures.towel_green
+	case 2:
+		texture = game_state.textures.towel_red
+	case 3:
+		texture = game_state.textures.towel_yellow
+	}
+
+	return Animation{texture = texture, frame_count = 1, kind = .IDLE}
 }
