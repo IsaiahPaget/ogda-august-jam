@@ -53,6 +53,8 @@ Entity :: struct {
 	max_health:           f32,
 	health_bar_width:     f32,
 	health_bar_max_width: f32,
+	cur_rockets:          int,
+	max_rockets:          int,
 }
 
 
@@ -63,7 +65,7 @@ entity_draw_default :: proc(e: Entity) {
 		x      = offset.x,
 		y      = offset.y,
 		width  = f32(texture.width) * e.scale / f32(e.animation.frame_count),
-		height = f32(texture.height)* e.scale,
+		height = f32(texture.height) * e.scale,
 	}
 
 	src := get_source_rect(e.animation)
@@ -82,10 +84,13 @@ entity_draw_default :: proc(e: Entity) {
 get_texture_position :: proc(e: Entity) -> rl.Vector2 {
 	texture_width := f32(e.animation.texture.width / i32(e.animation.frame_count))
 	texture_height := f32(e.animation.texture.height)
-	
+
 	switch e.texture_offset {
 	case .CENTER:
-		return rl.Vector2{e.pos.x - texture_width / 2 * e.scale, e.pos.y - texture_height / 2 * e.scale}
+		return rl.Vector2 {
+			e.pos.x - texture_width / 2 * e.scale,
+			e.pos.y - texture_height / 2 * e.scale,
+		}
 	case .TOP:
 		return rl.Vector2{e.pos.x - texture_width / 2 * e.scale, e.pos.y}
 	case .BOTTOM:

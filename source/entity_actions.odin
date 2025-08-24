@@ -1,13 +1,15 @@
 package game
 import "core:fmt"
+import "core:math/rand"
 import rl "vendor:raylib"
 
 /*
 * PLAYER
 */
 
+PLAYER_STARTING_POSITION :: -75
 player_setup :: proc(e: ^Entity) {
-	e.pos.x = -75
+	e.pos.x = PLAYER_STARTING_POSITION
 	e.pos.y = 45
 	e.texture_offset = .CENTER
 	e.collision.rectangle = rl.Rectangle {
@@ -24,6 +26,7 @@ player_setup :: proc(e: ^Entity) {
 	e.cur_health = e.max_health
 	entity_create(.PLAYER_HEALTH_BAR)
 	e.scale = 0.35
+	e.cur_rockets = 3
 }
 
 
@@ -31,12 +34,34 @@ player_update :: proc(e: ^Entity) {
 	fmt.assertf(e != nil, "player missing", e)
 	PLAYER_JUMP_FORCE :: -250
 
+	if e.pos.x > PLAYER_STARTING_POSITION && e.is_on_ground {
+		e.velocity.x -= 1
+	}
+
+	if e.pos.x < PLAYER_STARTING_POSITION {
+		game_state.target_speed = DEFAULT_MOVE_SPEED
+		e.pos.x += .5 // get you back on track faster
+	}
+
+	if e.pos.x < TOO_SLOW {
+		scene_pop()
+	}
+
+	if e.pos.x > TOO_FAST {
+		e.pos.x = TOO_FAST
+	}
+
 	if rl.IsKeyPressed(.SPACE) && e.is_on_ground {
 		e.velocity.y = PLAYER_JUMP_FORCE // negative because the world is drawn from top to.CENTER
 		e.animation = init_player_jump_animation()
 		e.is_on_ground = false
-	} else if rl.IsKeyPressed(.SPACE) && !e.is_on_ground {
+	} else if rl.IsKeyPressed(.SPACE) && !e.is_on_ground && e.cur_rockets > 0 {
 		e.animation = init_player_rocket_animation()
+		e.velocity = rl.Vector2 {50, PLAYER_JUMP_FORCE} // apply up negative because world is drawn top to bottom
+		e.cur_rockets -= 1
+		do_screen_shake()
+
+		fmt.assertf(e.cur_rockets > -1, "some how you spent zero rockets")
 	} else if (e.velocity.y > 0 && e.animation.kind != .ROCKET) {
 		e.animation = init_player_fall_animation()
 	}
@@ -75,20 +100,28 @@ player_update :: proc(e: ^Entity) {
 
 player_on_collide_crab :: proc(player, crab: ^Entity) {
 	do_screen_shake()
-	change_speed(50)
+	change_speed(-200)
 	entity_destroy(crab)
 }
 
 player_on_collide_ground :: proc(player, ground: ^Entity) {
-
 	player.is_on_ground = true
-	player.velocity.y = 0
+	player.velocity.xy = 0
 	player.animation = init_player_run_animation()
 	entity_move_and_slide(player, ground)
 }
 
 player_draw :: proc(e: Entity) {
 	entity_draw_default(e)
+	
+	texture := 	rl.LoadTexture("assets/rocket-icon-powerup.png")
+	for i in 0..<e.cur_rockets {
+		rl.DrawTextureV(
+		texture,
+		rl.Vector2 {f32(-150 + (15 * i32(i))), 60}, //magic numbers don't mind me
+		rl.WHITE,
+		)
+	}
 }
 
 init_player_idle_animation :: proc() -> Animation {
@@ -148,19 +181,13 @@ init_player_rocket_animation :: proc() -> Animation {
 
 crab_spawner_setup :: proc(e: ^Entity) {
 
-	e.pos = rl.Vector2{100, 0}
 	e.spawner_interval_s = 3
-	if DEBUG {
-		fmt.println("setting up crab spawner") // TODO: delete this line later
-	}
 }
 
 crab_spawner_update :: proc(e: ^Entity) {
-	// TODO: spawn the crabs
-	// Check if 10 seconds have passed
-	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
+	if rl.GetTime() - e.last_spawn_s >= rand.float64_range(0.5, 5) {
 		crab := entity_create(.CRAB)
-		crab.pos = rl.Vector2{110, 10}
+		crab.pos = rl.Vector2{200, 20}
 		crab.collision.rectangle.x = 110
 		crab.collision.rectangle.y = 10
 		e.last_spawn_s = rl.GetTime()
@@ -208,7 +235,7 @@ crab_update :: proc(e: ^Entity) {
 		}
 	}
 
-	e.velocity.x = game_state.move_speed * MOVE_SPEED_MULTIPLIER
+	e.velocity.x = game_state.current_speed * MOVE_SPEED_MULTIPLIER
 	e.pos += e.velocity * rl.GetFrameTime()
 
 	process_collisions(e, proc(entity_a, entity_b: ^Entity) {
@@ -273,7 +300,7 @@ background_setup :: proc(e: ^Entity) {
 }
 background_update :: proc(e: ^Entity) {
 	MOVE_SPEED_MULTIPLIER :: 0.8
-	e.velocity = rl.Vector2{game_state.move_speed * MOVE_SPEED_MULTIPLIER, 0}
+	e.velocity = rl.Vector2{game_state.current_speed * MOVE_SPEED_MULTIPLIER, 0}
 	e.pos += e.velocity * rl.GetFrameTime()
 
 	ground_replace(e)
@@ -312,7 +339,7 @@ foreground_setup :: proc(e: ^Entity) {
 
 foreground_update :: proc(e: ^Entity) {
 	MOVE_SPEED_MULTIPLIER :: 1.10
-	e.velocity = rl.Vector2{game_state.move_speed * MOVE_SPEED_MULTIPLIER, 0}
+	e.velocity = rl.Vector2{game_state.current_speed * MOVE_SPEED_MULTIPLIER, 0}
 	e.pos += e.velocity * rl.GetFrameTime()
 
 	ground_replace(e)
@@ -359,7 +386,7 @@ ground_setup :: proc(e: ^Entity) {
 
 ground_update :: proc(e: ^Entity) {
 	MOVE_SPEED_MULTIPLIER :: 1
-	e.velocity = rl.Vector2{game_state.move_speed * MOVE_SPEED_MULTIPLIER, 0}
+	e.velocity = rl.Vector2{game_state.current_speed * MOVE_SPEED_MULTIPLIER, 0}
 	e.pos += e.velocity * rl.GetFrameTime()
 
 	ground_replace(e)

@@ -33,12 +33,14 @@ import "core:math/linalg"
 import rl "vendor:raylib"
 
 PIXEL_WINDOW_HEIGHT :: 180
-DEBUG :: false
+DEBUG :: true
 SCREEN_WIDTH :: 1280
 SCREEN_HEIGHT :: 720
 GRAVITY :: 1000
-TARGET_MOVE_SPEED :: -150 // negative because world is moving not player
+DEFAULT_MOVE_SPEED :: -150 // negative because world is moving not player
 SUN_DAMAGE :: 5
+TOO_SLOW :: -200 // this is the position on the world that means you are too far back
+TOO_FAST :: 150 // this point you should not exceed
 // GLSL_VERSION :: 330
 
 Handle :: struct {
@@ -69,7 +71,8 @@ GameState :: struct {
 	screen_shake_dropOff:     f64,
 	screen_shake_speed:       f64,
 	// player move speed, but really the world
-	move_speed:               f32,
+	current_speed:            f32,
+	target_speed:             f32,
 	total_distance_metres:    int,
 }
 
@@ -134,7 +137,7 @@ ui_camera :: proc() -> rl.Camera2D {
 
 // positive number is a speed up and vica versa
 change_speed :: proc(amount: f32) {
-	game_state.move_speed -= amount
+	game_state.target_speed -= amount * rl.GetFrameTime()
 }
 
 input_dir_normalized :: proc() -> rl.Vector2 {
@@ -160,19 +163,16 @@ input_dir_normalized :: proc() -> rl.Vector2 {
 
 game_scene_update :: proc() {
 	game_state.total_distance_metres =
-		int(game_state.move_speed * f32(rl.GetTime() / 144) * 10) * -1 // because the world is moving backwards
-	if game_state.move_speed > TARGET_MOVE_SPEED {
-		if game_state.move_speed > TARGET_MOVE_SPEED + 10 {
-			game_state.move_speed = TARGET_MOVE_SPEED
-		}
-		game_state.move_speed *= 1.1 // higher because remember its the world moving in the -x direction
-	}
-	if game_state.move_speed < TARGET_MOVE_SPEED {
-		if game_state.move_speed < TARGET_MOVE_SPEED + 10 {
-			game_state.move_speed = TARGET_MOVE_SPEED
-		}
-		game_state.move_speed *= 0.9
-	}
+		int(game_state.current_speed * f32(rl.GetTime() / 144) * 10) * -1 // because the world is moving backwards
+
+	SPEED_ADJUSTMENT_RATE: f32 = 0.01
+
+	// Smoothly move current_speed towards target_speed
+	game_state.current_speed = math.lerp(
+		game_state.current_speed,
+		game_state.target_speed,
+		SPEED_ADJUSTMENT_RATE,
+	)
 }
 
 update :: proc() {
@@ -306,7 +306,8 @@ game_init :: proc() {
 		screen_shake_time    = 4.0,
 		screen_shake_dropOff = 5.1,
 		screen_shake_speed   = 40.0,
-		move_speed           = -100,
+		current_speed        = DEFAULT_MOVE_SPEED,
+		target_speed         = DEFAULT_MOVE_SPEED,
 	}
 
 	if len(game_state.scenes) == 0 {
