@@ -116,8 +116,10 @@ player_update :: proc(e: ^Entity) {
 
 player_on_collide_parasol :: proc(player, parasol: ^Entity) {
 	if player.velocity.y > 0 && player.pos.y < parasol.pos.y - 14{ // because remember it's flipped on the Y
-		player.velocity.y += -500 // needs to be high to overcome gravity
+		player.velocity.y = 0
+		player.velocity.y += -370 // needs to be high to overcome gravity
 		player.animation = init_player_jump_animation()
+		rl.PlaySound(game_state.sounds.parasol_bounce_sfx)
 	}
 	parasol.animation = init_parasol_bounce_anim()
 	parasol.last_bounce_s = rl.GetTime()
@@ -128,6 +130,7 @@ player_on_collide_pidgeon :: proc(player, pidgeon: ^Entity) {
 	do_screen_shake(1.5, 2, 60)
 	change_speed(-100)
 	pidgeon.velocity.y += -50
+	rl.PlaySound(game_state.sounds.seagull_airborne_sfx)
 }
 
 player_on_collide_towel :: proc(player, towel: ^Entity) {

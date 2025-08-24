@@ -74,8 +74,23 @@ GameState :: struct {
 	current_speed:            f32,
 	target_speed:             f32,
 	total_distance_metres:    int,
-	sounds:                   Sounds,
 	textures:                 Textures,
+	sounds:                   Sounds,
+	soundtrack:               rl.Music,
+}
+
+Sounds :: struct {
+	rocket_sfx:            rl.Sound,
+	jump_sfx:              rl.Sound,
+	dog_pain_sfx:          rl.Sound,
+	game_over:             rl.Sound,
+	cooler_box_sfx:        rl.Sound,
+	parasol_bounce_sfx:    rl.Sound,
+	popsicle_sfx:          rl.Sound,
+	seagull_takeoff_sfx:   rl.Sound,
+	seagull_airborne_sfx:  rl.Sound,
+	sandcastle_impact_sfx: rl.Sound,
+	rocket_pickup_sfx:     rl.Sound,
 }
 
 // WARNING: if you add a texture you MUST also unload it game_shutdown
@@ -98,20 +113,6 @@ Textures :: struct {
 	parasol:             rl.Texture2D,
 	parasol_bounce:      rl.Texture2D,
 	jump_poof:           rl.Texture2D,
-}
-
-Sounds :: struct {
-	rocket_sfx:            rl.Sound,
-	jump_sfx:              rl.Sound,
-	dog_pain_sfx:          rl.Sound,
-	game_over:             rl.Sound,
-	cooler_box_sfx:        rl.Sound,
-	parasol_bounce_sfx:    rl.Sound,
-	popsicle_sfx:          rl.Sound,
-	seagull_takeoff_sfx:   rl.Sound,
-	seagull_airborne_sfx:  rl.Sound,
-	sandcastle_impact_sfx: rl.Sound,
-	rocket_pickup_sfx:     rl.Sound,
 }
 
 game_state: ^GameState
@@ -235,7 +236,7 @@ update :: proc() {
 
 	game_state.scratch = {}
 	rebuild_scratch()
-
+	rl.UpdateMusicStream(game_state.soundtrack)
 	// big :update time
 	for handle in entity_get_all() {
 		e := entity_get(handle)
@@ -390,6 +391,20 @@ game_init :: proc() {
 		screen_shake_time = 4.0,
 		screen_shake_dropOff = 5.1,
 		screen_shake_speed = 40.0,
+		sounds = {
+			rocket_sfx = rl.LoadSound("assets/SFX/RocketLaunch_SFX_quick.wav"),
+			jump_sfx = rl.LoadSound("assets/SFX/Sand-Jump.wav"),
+			dog_pain_sfx = rl.LoadSound("assets/SFX/Sad_Dog_Bark_Single.wav"),
+			game_over = rl.LoadSound("assets/SFX/Sad_Dog_Barking.wav"),
+			cooler_box_sfx = rl.LoadSound("assets/SFX/CoolerBox_SFX.wav"),
+			parasol_bounce_sfx = rl.LoadSound("assets/SFX/Parasol_SFX_3.wav"),
+			popsicle_sfx = rl.LoadSound("assets/SFX/popsicle_SFX_1.wav"),
+			seagull_takeoff_sfx = rl.LoadSound("assets/SFX/Seagull Grounded SFX.wav"),
+			seagull_airborne_sfx = rl.LoadSound("assets/SFX/Seagull Flying SFX.wav"),
+			sandcastle_impact_sfx = rl.LoadSound("assets/SFX/Sandcastle-Impact.wav"),
+			rocket_pickup_sfx = rl.LoadSound("assets/SFX/Rocket_pickup.wav"),
+		},
+		soundtrack = rl.LoadMusicStream("assets/SFX/Endless Scamper.mp3"),
 		current_speed = DEFAULT_MOVE_SPEED,
 		target_speed = DEFAULT_MOVE_SPEED,
 		textures = {
@@ -414,27 +429,15 @@ game_init :: proc() {
 			parasol_bounce      = rl.LoadTexture("assets/parasol-bounce.png"),
 			jump_poof           = rl.LoadTexture("assets/jump-poof.png"),
 		},
-		sounds = {
-			rocket_sfx = rl.LoadSound("assets/SFX/RocketLaunch_SFX_quick.wav"),
-			jump_sfx = rl.LoadSound("assets/SFX/Sand-Jump.wav"),
-			dog_pain_sfx = rl.LoadSound("assets/SFX/Sad_Dog_Bark_Single.wav"),
-			game_over = rl.LoadSound("assets/SFX/Sad_Dog_Barking.wav"),
-			cooler_box_sfx = rl.LoadSound("assets/SFX/CoolerBox_SFX.wav"),
-			parasol_bounce_sfx = rl.LoadSound("assets/SFX/Parasol_SFX_3.wav"),
-			popsicle_sfx = rl.LoadSound("assets/SFX/popsicle_SFX_1.wav"),
-			seagull_takeoff_sfx = rl.LoadSound("assets/SFX/Seagull Grounded SFX.wav"),
-			seagull_airborne_sfx = rl.LoadSound("assets/SFX/Seagull Flying SFX.wav"),
-			sandcastle_impact_sfx = rl.LoadSound("assets/SFX/Sandcastle-Impact.wav"),
-			rocket_pickup_sfx = rl.LoadSound("assets/SFX/Rocket_pickup.wav"),
-		},
 	}
 
-
+	
 	if len(game_state.scenes) == 0 {
 		scene_push(.MAIN_MENU)
 	}
-
+	
 	game_hot_reloaded(game_state)
+	rl.PlayMusicStream(game_state.soundtrack)
 }
 
 @(export)
