@@ -28,15 +28,17 @@ created.
 package game
 
 import "core:fmt"
+import "core:math"
 import "core:math/linalg"
 import rl "vendor:raylib"
-import "core:math"
 
 PIXEL_WINDOW_HEIGHT :: 180
-DEBUG :: true
+DEBUG :: false
 SCREEN_WIDTH :: 1280
 SCREEN_HEIGHT :: 720
 GRAVITY :: 1000
+TARGET_MOVE_SPEED :: -150 // negative because world is moving not player
+SUN_DAMAGE :: 5
 // GLSL_VERSION :: 330
 
 Handle :: struct {
@@ -48,23 +50,27 @@ Handle :: struct {
 
 GameState :: struct {
 	// Entity
-	entity_top_count: int,
-	latest_entity_id: int,
-	entities:         [MAX_ENTITIES]Entity,
-	entity_free_list: [dynamic]int,
+	entity_top_count:         int,
+	latest_entity_id:         int,
+	entities:                 [MAX_ENTITIES]Entity,
+	entity_free_list:         [dynamic]int,
 	// Scenes
-	scenes:           [dynamic]Scene,
+	scenes:                   [dynamic]Scene,
 	// Stuff
-	player_handle:    Handle,
-	run:              bool,
-	scratch:          struct {
+	player_handle:            Handle,
+	run:                      bool,
+	scratch:                  struct {
 		all_entities: []Handle,
 	},
-	is_screen_shaking: bool,
-	screen_shake_time: f64,
+	// screen shake
+	is_screen_shaking:        bool,
+	screen_shake_time:        f64,
 	screen_shake_timeElapsed: f64,
-	screen_shake_dropOff : f64,
-	screen_shake_speed : f64,
+	screen_shake_dropOff:     f64,
+	screen_shake_speed:       f64,
+	// player move speed, but really the world
+	move_speed:               f32,
+	total_distance_metres:    int,
 }
 
 game_state: ^GameState
@@ -86,13 +92,24 @@ get_player :: proc() -> (player: ^Entity, ok: bool) #optional_ok {
 	return entity_get(game_state.player_handle)
 }
 
+do_screen_shake :: proc() {
+	game_state.is_screen_shaking = true
+	game_state.screen_shake_timeElapsed = game_state.screen_shake_time
+}
+
 screen_shake :: proc(target: ^rl.Vector2) {
 	game_state.screen_shake_timeElapsed -= f64(rl.GetFrameTime()) * game_state.screen_shake_dropOff
 
-	target.x = target.x + f32(game_state.screen_shake_timeElapsed) * math.sin_f32(f32(rl.GetTime()) * f32(game_state.screen_shake_speed))
-	target.y = target.y + f32(game_state.screen_shake_timeElapsed) * math.sin_f32(f32(rl.GetTime()) * f32(game_state.screen_shake_speed) * 1.3 + 1.7)
+	target.x =
+		target.x +
+		f32(game_state.screen_shake_timeElapsed) *
+			math.sin_f32(f32(rl.GetTime()) * f32(game_state.screen_shake_speed))
+	target.y =
+		target.y +
+		f32(game_state.screen_shake_timeElapsed) *
+			math.sin_f32(f32(rl.GetTime()) * f32(game_state.screen_shake_speed) * 1.3 + 1.7)
 
-	if(game_state.screen_shake_timeElapsed <= 0) {
+	if (game_state.screen_shake_timeElapsed <= 0) {
 		game_state.is_screen_shaking = false
 	}
 }
@@ -101,12 +118,11 @@ game_camera :: proc() -> rl.Camera2D {
 	w := f32(rl.GetScreenWidth())
 	h := f32(rl.GetScreenHeight())
 
-	player, ok := get_player()
-	
-	target : rl.Vector2 = player.pos if ok else rl.Vector2(0)
 
-	if game_state.is_screen_shaking { 
-		screen_shake(&target) 
+	target: rl.Vector2
+
+	if game_state.is_screen_shaking {
+		screen_shake(&target)
 	}
 
 	return {zoom = h / PIXEL_WINDOW_HEIGHT, target = target, offset = {w / 2, h / 2}}
@@ -114,6 +130,11 @@ game_camera :: proc() -> rl.Camera2D {
 
 ui_camera :: proc() -> rl.Camera2D {
 	return {zoom = f32(rl.GetScreenHeight()) / PIXEL_WINDOW_HEIGHT}
+}
+
+// positive number is a speed up and vica versa
+change_speed :: proc(amount: f32) {
+	game_state.move_speed -= amount
 }
 
 input_dir_normalized :: proc() -> rl.Vector2 {
@@ -135,6 +156,23 @@ input_dir_normalized :: proc() -> rl.Vector2 {
 
 	input = linalg.normalize0(input)
 	return input
+}
+
+game_scene_update :: proc() {
+	game_state.total_distance_metres =
+		int(game_state.move_speed * f32(rl.GetTime() / 144) * 10) * -1 // because the world is moving backwards
+	if game_state.move_speed > TARGET_MOVE_SPEED {
+		if game_state.move_speed > TARGET_MOVE_SPEED + 10 {
+			game_state.move_speed = TARGET_MOVE_SPEED
+		}
+		game_state.move_speed *= 1.1 // higher because remember its the world moving in the -x direction
+	}
+	if game_state.move_speed < TARGET_MOVE_SPEED {
+		if game_state.move_speed < TARGET_MOVE_SPEED + 10 {
+			game_state.move_speed = TARGET_MOVE_SPEED
+		}
+		game_state.move_speed *= 0.9
+	}
 }
 
 update :: proc() {
@@ -165,7 +203,17 @@ update :: proc() {
 			foreground_update(e)
 		case .BACKGROUND:
 			background_update(e)
+		case .SUN:
+			sun_update(e)
+		case .PLAYER_HEALTH_BAR:
+			player_health_bar_update(e)
 		}
+	}
+
+	switch scene_get().kind {
+	case .GAME:
+		game_scene_update()
+	case .MAIN_MENU:
 	}
 
 	if rl.IsKeyPressed(.ESCAPE) {
@@ -202,6 +250,10 @@ draw :: proc() {
 			foreground_draw(e^)
 		case .BACKGROUND:
 			background_draw(e^)
+		case .SUN:
+			sun_draw(e^)
+		case .PLAYER_HEALTH_BAR:
+			player_health_bar_draw(e^)
 		}
 	}
 
@@ -211,10 +263,12 @@ draw :: proc() {
 	// NOTE: `fmt.ctprintf` uses the temp allocator. The temp allocator is
 	// cleared at the end of the frame by the main application, meaning inside
 	// `main_hot_reload.odin`, `main_release.odin` or `main_web_entry.odin`.
+	rl.DrawText(fmt.ctprintf("Distance: %v", game_state.total_distance_metres), 5, 5, 8, rl.WHITE)
+
 	if DEBUG {
 		player, ok := get_player()
 		if ok {
-			rl.DrawText(fmt.ctprintf("player_pos: %v", player.pos), 5, 5, 8, rl.WHITE)
+			rl.DrawText(fmt.ctprintf("player_pos: %v", player.pos), 5, 20, 5, rl.RED)
 		}
 	}
 	rl.EndMode2D()
@@ -248,10 +302,11 @@ game_init :: proc() {
 	entity_init_core() // Initialize the safe default entity
 	game_state = new(GameState)
 	game_state^ = GameState {
-		run            = true,
-		screen_shake_time = 4.0,
+		run                  = true,
+		screen_shake_time    = 4.0,
 		screen_shake_dropOff = 5.1,
-		screen_shake_speed = 40.0,
+		screen_shake_speed   = 40.0,
+		move_speed           = -100,
 	}
 
 	if len(game_state.scenes) == 0 {
