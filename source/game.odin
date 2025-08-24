@@ -74,6 +74,22 @@ GameState :: struct {
 	current_speed:            f32,
 	target_speed:             f32,
 	total_distance_metres:    int,
+	textures:                 Textures,
+}
+
+// WARNING: if you add a texture you MUST also unload it game_shutdown
+Textures :: struct {
+	rocket_icon_powerup: rl.Texture2D,
+	round_cat:           rl.Texture2D,
+	corgi_run:           rl.Texture2D,
+	corgi_jump:          rl.Texture2D,
+	corgi_fall:          rl.Texture2D,
+	corgi_rocket_fire:   rl.Texture2D,
+	crab_run:            rl.Texture2D,
+	background:          rl.Texture2D,
+	foreground:          rl.Texture2D,
+	ground:              rl.Texture2D,
+	sun:                 rl.Texture2D,
 }
 
 game_state: ^GameState
@@ -308,7 +324,23 @@ game_init :: proc() {
 		screen_shake_speed   = 40.0,
 		current_speed        = DEFAULT_MOVE_SPEED,
 		target_speed         = DEFAULT_MOVE_SPEED,
+		textures = {
+			// Load all textures
+			// WARNING: if you add a texture you MUST also unload it game_shutdown
+			rocket_icon_powerup = rl.LoadTexture("assets/rocket-icon-powerup.png"),
+			round_cat = rl.LoadTexture("assets/round_cat.png"),
+			corgi_run = rl.LoadTexture("assets/CorgiRun.png"),
+			corgi_jump = rl.LoadTexture("assets/CorgiJump.png"),
+			corgi_fall = rl.LoadTexture("assets/CorgiFall.png"),
+			corgi_rocket_fire = rl.LoadTexture("assets/CorgiRocketFire.png"),
+			crab_run = rl.LoadTexture("assets/crab/crab_run.png"),
+			background = rl.LoadTexture("assets/ground/background.png"),
+			foreground = rl.LoadTexture("assets/ground/foreground.png"),
+			ground = rl.LoadTexture("assets/ground/ground.png"),
+			sun = rl.LoadTexture("assets/sun.png"),
+		},
 	}
+
 
 	if len(game_state.scenes) == 0 {
 		scene_push(.MAIN_MENU)
@@ -328,9 +360,21 @@ game_should_run :: proc() -> bool {
 
 	return game_state.run
 }
-
 @(export)
 game_shutdown :: proc() {
+	// Unload all textures
+	rl.UnloadTexture(game_state.textures.rocket_icon_powerup)
+	rl.UnloadTexture(game_state.textures.round_cat)
+	rl.UnloadTexture(game_state.textures.corgi_run)
+	rl.UnloadTexture(game_state.textures.corgi_jump)
+	rl.UnloadTexture(game_state.textures.corgi_fall)
+	rl.UnloadTexture(game_state.textures.corgi_rocket_fire)
+	rl.UnloadTexture(game_state.textures.crab_run)
+	rl.UnloadTexture(game_state.textures.background)
+	rl.UnloadTexture(game_state.textures.foreground)
+	rl.UnloadTexture(game_state.textures.ground)
+	rl.UnloadTexture(game_state.textures.sun)
+
 	delete(game_state.scenes) // free the scenes array
 	delete(game_state.entity_free_list) // free the entity freelist
 	free(game_state)

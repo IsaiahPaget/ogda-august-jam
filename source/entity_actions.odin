@@ -114,7 +114,7 @@ player_on_collide_ground :: proc(player, ground: ^Entity) {
 player_draw :: proc(e: Entity) {
 	entity_draw_default(e)
 	
-	texture := 	rl.LoadTexture("assets/rocket-icon-powerup.png")
+	texture := game_state.textures.rocket_icon_powerup
 	for i in 0..<e.cur_rockets {
 		rl.DrawTextureV(
 		texture,
@@ -126,7 +126,7 @@ player_draw :: proc(e: Entity) {
 
 init_player_idle_animation :: proc() -> Animation {
 	return Animation {
-		texture = rl.LoadTexture("assets/round_cat.png"),
+		texture = game_state.textures.round_cat,
 		frame_count = 1,
 		frame_timer = 0,
 		current_frame = 0,
@@ -136,7 +136,7 @@ init_player_idle_animation :: proc() -> Animation {
 }
 init_player_run_animation :: proc() -> Animation {
 	return Animation {
-		texture = rl.LoadTexture("assets/CorgiRun.png"),
+		texture = game_state.textures.corgi_run,
 		frame_count = 4,
 		frame_timer = 0,
 		current_frame = 0,
@@ -146,7 +146,7 @@ init_player_run_animation :: proc() -> Animation {
 }
 init_player_jump_animation :: proc() -> Animation {
 	return Animation {
-		texture = rl.LoadTexture("assets/CorgiJump.png"),
+		texture = game_state.textures.corgi_jump,
 		frame_count = 1,
 		frame_timer = 0,
 		current_frame = 0,
@@ -156,7 +156,7 @@ init_player_jump_animation :: proc() -> Animation {
 }
 init_player_fall_animation :: proc() -> Animation {
 	return Animation {
-		texture = rl.LoadTexture("assets/CorgiFall.png"),
+		texture = game_state.textures.corgi_fall,
 		frame_count = 1,
 		frame_timer = 0,
 		current_frame = 0,
@@ -166,7 +166,7 @@ init_player_fall_animation :: proc() -> Animation {
 }
 init_player_rocket_animation :: proc() -> Animation {
 	return Animation {
-		texture = rl.LoadTexture("assets/CorgiRocketFire.png"),
+		texture = game_state.textures.corgi_rocket_fire,
 		frame_count = 2,
 		frame_timer = 0,
 		current_frame = 0,
@@ -263,7 +263,7 @@ crab_on_collide_ground :: proc(crab, ground: ^Entity) {
 
 init_crab_run_anim :: proc() -> Animation {
 	return Animation {
-		texture = rl.LoadTexture("assets/crab/crab_run.png"),
+		texture = game_state.textures.crab_run,
 		frame_count = 3,
 		frame_timer = 0,
 		current_frame = 0,
@@ -321,7 +321,7 @@ background_draw :: proc(e: Entity) {
 
 init_background_anim :: proc() -> Animation {
 	return Animation {
-		texture = rl.LoadTexture("assets/ground/background.png"),
+		texture = game_state.textures.background,
 		frame_count = 1,
 		kind = .NIL,
 	}
@@ -360,7 +360,7 @@ foreground_draw :: proc(e: Entity) {
 
 init_foreground_anim :: proc() -> Animation {
 	return Animation {
-		texture = rl.LoadTexture("assets/ground/foreground.png"),
+		texture = game_state.textures.foreground,
 		frame_count = 1,
 		kind = .NIL,
 	}
@@ -407,7 +407,7 @@ ground_draw :: proc(e: Entity) {
 
 init_ground_anim :: proc() -> Animation {
 	return Animation {
-		texture = rl.LoadTexture("assets/ground/ground.png"),
+		texture = game_state.textures.ground,
 		frame_count = 1,
 		kind = .NIL,
 	}
@@ -459,7 +459,7 @@ sun_draw :: proc(e: Entity) {
 init_sun_anim :: proc() -> Animation {
 	// TODO: make the sun stay angry after x amount of time
 	return Animation {
-		texture = rl.LoadTexture("assets/sun.png"),
+		texture = game_state.textures.sun,
 		frame_count = 4,
 		frame_length = 10,
 		kind = .IDLE,
