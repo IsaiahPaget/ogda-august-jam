@@ -22,6 +22,8 @@ EntityKind :: enum {
 	TOWEL_SPAWNER,
 	PIDGEON,
 	PIDGEON_SPAWNER,
+	PARASOL,
+	PARASOL_SPAWNER,
 }
 
 EntityTextureOffset :: enum {
@@ -53,13 +55,17 @@ Entity :: struct {
 	last_spawn_s:         f64, // since game init
 	spawner_interval_s:   f64,
 
-	// Player
+	// PLAYER
 	cur_health:           f32,
 	max_health:           f32,
 	health_bar_width:     f32,
 	health_bar_max_width: f32,
 	cur_rockets:          int,
 	max_rockets:          int,
+
+	// PARASOL
+	last_bounce_s:        f64,
+	is_bounce:            bool,
 }
 
 
@@ -237,5 +243,9 @@ entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 		pidgeon_setup(e)
 	case .PIDGEON_SPAWNER:
 		pidgeon_spawner_setup(e)
+	case .PARASOL:
+		parasol_setup(e)
+	case .PARASOL_SPAWNER:
+		parasol_spawner_setup(e)
 	}
 }

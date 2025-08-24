@@ -95,6 +95,9 @@ player_update :: proc(e: ^Entity) {
 		case .BACKGROUND:
 		case .SUN:
 		case .PLAYER_HEALTH_BAR:
+		case .PARASOL_SPAWNER:
+		case .PARASOL:
+			player_on_collide_parasol(entity_a,entity_b)
 		case .PIDGEON_SPAWNER:
 		case .PIDGEON:
 			player_on_collide_pidgeon(entity_a, entity_b)
@@ -103,6 +106,16 @@ player_update :: proc(e: ^Entity) {
 			player_on_collide_towel(entity_a, entity_b)
 		}
 	})
+}
+
+player_on_collide_parasol :: proc(player, parasol: ^Entity) {
+	if player.velocity.y > 0 && player.pos.y < parasol.pos.y - 14{ // because remember it's flipped on the Y
+		player.velocity.y += -200
+		player.animation = init_player_jump_animation()
+	}
+	parasol.animation = init_parasol_bounce_anim()
+	parasol.last_bounce_s = rl.GetTime()
+	parasol.is_bounce = true
 }
 
 player_on_collide_pidgeon :: proc(player, pidgeon: ^Entity) {
@@ -241,7 +254,7 @@ crab_draw :: proc(e: Entity) {
 
 crab_update :: proc(e: ^Entity) {
 
-	MOVE_SPEED_MULTIPLIER :: 1
+	MOVE_SPEED_MULTIPLIER :: 1.1
 
 	if rl.GetTime() - e.created_on >= e.lifespan_s {
 		entity_destroy(e)
@@ -273,6 +286,8 @@ crab_update :: proc(e: ^Entity) {
 		case .TOWEL_SPAWNER:
 		case .PIDGEON_SPAWNER:
 		case .PIDGEON:
+		case .PARASOL_SPAWNER:
+		case .PARASOL:
 		}
 	})
 }
@@ -580,7 +595,7 @@ pidgeon_spawner_update :: proc(e: ^Entity) {
 	if rl.GetTime() - e.last_spawn_s >= rand.float64_range(2, 10) {
 		pidgeon := entity_create(.PIDGEON)
 		pidgeon.pos = rl.Vector2{300, rand.float32_range(-20, 30)}
-		pidgeon.collision.rectangle.x = 110
+		pidgeon.collision.rectangle.x = 300
 		pidgeon.collision.rectangle.y = 10
 		e.last_spawn_s = rl.GetTime()
 	}
@@ -633,5 +648,87 @@ init_pidgeon_fly_anim :: proc() -> Animation {
 		frame_count = 4,
 		frame_length = 0.1,
 		kind = .IDLE,
+	}
+}
+
+/*
+* PARASOL SPAWNER
+*/
+
+parasol_spawner_setup :: proc(e: ^Entity) {
+}
+
+parasol_spawner_update :: proc(e: ^Entity) {
+	if rl.GetTime() - e.last_spawn_s >= rand.float64_range(2, 7) {
+		parasol := entity_create(.PARASOL)
+		parasol.pos = rl.Vector2{300, 30}
+		parasol.collision.rectangle.x = 300
+		e.last_spawn_s = rl.GetTime()
+	}
+}
+
+parasol_spawner_draw :: proc(e: Entity) {
+	if DEBUG {
+		rl.DrawRectangleV(e.pos, {30, 30}, rl.BLUE)
+	}
+}
+
+/*
+* PARASOL
+*/
+parasol_setup :: proc(e: ^Entity) {
+	e.lifespan_s = 10
+	e.animation = init_parasol_idle_anim()
+	e.texture_offset = .CENTER
+	e.collision.rectangle = rl.Rectangle {
+		width  = 50,
+		height = 10,
+	}
+	e.collision.offset = .CENTER
+	e.collision.is_active = true
+	e.scale = 0.5
+}
+
+parasol_draw :: proc(e: Entity) {
+	entity_draw_default(e)
+}
+
+parasol_update :: proc(e: ^Entity) {
+
+	MOVE_SPEED_MULTIPLIER :: 1
+	BOUNCE_DURATION_S :: .3
+
+	if e.is_bounce && rl.GetTime() - e.last_bounce_s >= BOUNCE_DURATION_S{
+		e.animation = init_parasol_idle_anim()
+		e.is_bounce = false
+	}
+
+	if rl.GetTime() - e.created_on >= e.lifespan_s {
+		entity_destroy(e)
+	}
+
+	e.velocity.x = game_state.current_speed * MOVE_SPEED_MULTIPLIER
+	e.pos += e.velocity * rl.GetFrameTime()
+
+	// custom update of collision box because only the to of the sprite is collidable
+	e.collision.rectangle.x = e.pos.x - (e.collision.rectangle.width / 2)
+	e.collision.rectangle.y = e.pos.y - (e.collision.rectangle.height / 2) - 15
+
+}
+
+init_parasol_idle_anim :: proc() -> Animation {
+	return Animation {
+		texture = game_state.textures.parasol,
+		frame_count = 1,
+		frame_length = 0,
+		kind = .NIL,
+	}
+}
+init_parasol_bounce_anim :: proc() -> Animation {
+	return Animation {
+		texture = game_state.textures.parasol_bounce,
+		frame_count = 3,
+		frame_length = 0.1,
+		kind = .BOUNCE,
 	}
 }

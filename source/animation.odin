@@ -17,6 +17,7 @@ AnimationKind :: enum {
 	IDLE,
 	RUN,
 	JUMP,
+	BOUNCE, // for parasol
 	FALL,
 	ROCKET,
 }

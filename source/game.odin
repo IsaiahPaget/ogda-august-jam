@@ -33,7 +33,7 @@ import "core:math/linalg"
 import rl "vendor:raylib"
 
 PIXEL_WINDOW_HEIGHT :: 180
-DEBUG :: false
+DEBUG :: true
 SCREEN_WIDTH :: 1280
 SCREEN_HEIGHT :: 720
 GRAVITY :: 1000
@@ -94,6 +94,8 @@ Textures :: struct {
 	towel_red:           rl.Texture2D,
 	towel_yellow:        rl.Texture2D,
 	pidgeon_flying:      rl.Texture2D,
+	parasol:             rl.Texture2D,
+	parasol_bounce:      rl.Texture2D,
 }
 
 game_state: ^GameState
@@ -253,6 +255,10 @@ update :: proc() {
 			pidgeon_spawner_update(e)
 		case .PIDGEON:
 			pidgeon_update(e)
+		case .PARASOL:
+			parasol_update(e)
+		case .PARASOL_SPAWNER:
+			parasol_spawner_update(e)
 		}
 	}
 
@@ -308,6 +314,10 @@ draw :: proc() {
 			pidgeon_spawner_draw(e^)
 		case .PIDGEON:
 			pidgeon_draw(e^)
+		case .PARASOL:
+			parasol_draw(e^)
+		case .PARASOL_SPAWNER:
+			parasol_spawner_draw(e^)
 		}
 	}
 
@@ -380,6 +390,8 @@ game_init :: proc() {
 			towel_red           = rl.LoadTexture("assets/RedTowel.png"),
 			towel_yellow        = rl.LoadTexture("assets/YellowTowel.png"),
 			pidgeon_flying      = rl.LoadTexture("assets/pidgeon_flying.png"),
+			parasol             = rl.LoadTexture("assets/parasol.png"),
+			parasol_bounce      = rl.LoadTexture("assets/parasol-bounce.png"),
 		},
 	}
 
@@ -420,6 +432,8 @@ game_shutdown :: proc() {
 	rl.UnloadTexture(game_state.textures.towel_red)
 	rl.UnloadTexture(game_state.textures.towel_yellow)
 	rl.UnloadTexture(game_state.textures.pidgeon_flying)
+	rl.UnloadTexture(game_state.textures.parasol)
+	rl.UnloadTexture(game_state.textures.parasol_bounce)
 
 	delete(game_state.scenes) // free the scenes array
 	delete(game_state.entity_free_list) // free the entity freelist
