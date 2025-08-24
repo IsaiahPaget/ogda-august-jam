@@ -55,6 +55,7 @@ player_update :: proc(e: ^Entity) {
 	if rl.IsKeyPressed(.SPACE) && e.is_on_ground {
 		e.velocity.y = PLAYER_JUMP_FORCE // negative because the world is drawn from top to.CENTER
 		e.animation = init_player_jump_animation()
+		rl.PlaySound(game_state.sounds.jump_sfx)
 		poof := entity_create(.JUMP_POOF)
 		poof.pos = e.pos
 		e.is_on_ground = false
@@ -62,6 +63,7 @@ player_update :: proc(e: ^Entity) {
 		e.animation = init_player_rocket_animation()
 		e.velocity = rl.Vector2{50, PLAYER_JUMP_FORCE} // apply up negative because world is drawn top to bottom
 		e.cur_rockets -= 1
+		rl.PlaySound(game_state.sounds.rocket_sfx)
 		do_screen_shake(4, 5.1,40)
 
 		fmt.assertf(e.cur_rockets > -1, "some how you spent zero rockets")
@@ -76,6 +78,7 @@ player_update :: proc(e: ^Entity) {
 	}
 
 	if e.cur_health <= 0 {
+		rl.PlaySound(game_state.sounds.game_over)
 		scene_pop()
 	}
 
@@ -135,6 +138,7 @@ player_on_collide_crab :: proc(player, crab: ^Entity) {
 	do_screen_shake(1.5, 2, 60)
 	change_speed(-200)
 	crab.velocity.y += -300
+	rl.PlaySound(game_state.sounds.dog_pain_sfx)
 }
 
 player_on_collide_ground :: proc(player, ground: ^Entity) {
