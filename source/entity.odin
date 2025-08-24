@@ -63,7 +63,7 @@ entity_draw_default :: proc(e: Entity) {
 		x      = offset.x,
 		y      = offset.y,
 		width  = f32(texture.width) * e.scale / f32(e.animation.frame_count),
-		height = f32(texture.height),
+		height = f32(texture.height)* e.scale,
 	}
 
 	src := get_source_rect(e.animation)
@@ -82,18 +82,18 @@ entity_draw_default :: proc(e: Entity) {
 get_texture_position :: proc(e: Entity) -> rl.Vector2 {
 	texture_width := f32(e.animation.texture.width / i32(e.animation.frame_count))
 	texture_height := f32(e.animation.texture.height)
-
+	
 	switch e.texture_offset {
 	case .CENTER:
-		return rl.Vector2{e.pos.x - f32(texture_width / 2), e.pos.y - f32(texture_height / 2)}
+		return rl.Vector2{e.pos.x - texture_width / 2 * e.scale, e.pos.y - texture_height / 2 * e.scale}
 	case .TOP:
-		return rl.Vector2{e.pos.x - f32(texture_width / 2), e.pos.y}
+		return rl.Vector2{e.pos.x - texture_width / 2 * e.scale, e.pos.y}
 	case .BOTTOM:
-		return rl.Vector2{e.pos.x - f32(texture_width / 2), e.pos.y - f32(texture_height)}
+		return rl.Vector2{e.pos.x - texture_width / 2 * e.scale, e.pos.y - texture_height / 2}
 	case .LEFT:
-		return rl.Vector2{e.pos.x, e.pos.y - f32(texture_height / 2)}
+		return rl.Vector2{e.pos.x, e.pos.y - texture_height / 2 * e.scale}
 	case .RIGHT:
-		return rl.Vector2{e.pos.x - f32(texture_width), e.pos.y - f32(texture_height / 2)}
+		return rl.Vector2{e.pos.x - texture_width, e.pos.y - texture_height / 2 * e.scale}
 	case:
 		return e.pos
 	}
