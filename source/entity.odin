@@ -178,7 +178,6 @@ entity_get :: proc(handle: Handle) -> (entity: ^Entity, ok: bool) #optional_ok {
 }
 
 entity_clear_all :: proc() {
-	fmt.println("destroy")
 	for ent in game_state.scratch.all_entities {
 		entity_destroy(entity_get(ent))
 	}

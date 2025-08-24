@@ -42,7 +42,7 @@ player_update :: proc(e: ^Entity) {
 
 	if e.pos.x < PLAYER_STARTING_POSITION {
 		game_state.target_speed = DEFAULT_MOVE_SPEED
-		e.pos.x += .5 // get you back on track faster
+		e.pos.x += .1 // get you back on track faster
 	}
 
 	if e.pos.x < TOO_SLOW {
@@ -164,6 +164,7 @@ player_on_collide_pidgeon :: proc(player, pidgeon: ^Entity) {
 }
 
 player_on_collide_towel :: proc(player, towel: ^Entity) {
+	player.velocity.x += 1
 	change_speed(20)
 }
 

@@ -74,6 +74,7 @@ GameState :: struct {
 	current_speed:            f32,
 	target_speed:             f32,
 	total_distance_metres:    int,
+	previous_distance_metres: int,
 	textures:                 Textures,
 	sounds:                   Sounds,
 	soundtrack:               rl.Music,
@@ -366,7 +367,7 @@ draw :: proc() {
 	// NOTE: `fmt.ctprintf` uses the temp allocator. The temp allocator is
 	// cleared at the end of the frame by the main application, meaning inside
 	// `main_hot_reload.odin`, `main_release.odin` or `main_web_entry.odin`.
-	rl.DrawText(fmt.ctprintf("Distance: %v", game_state.total_distance_metres), 5, 5, 8, rl.WHITE)
+	rl.DrawText(fmt.ctprintf("Distance: %v", game_state.total_distance_metres - game_state.previous_distance_metres), 5, 5, 8, rl.WHITE)
 
 	if DEBUG {
 		player, ok := get_player()
