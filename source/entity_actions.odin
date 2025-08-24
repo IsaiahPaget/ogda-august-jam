@@ -128,7 +128,7 @@ player_on_collide_pidgeon :: proc(player, pidgeon: ^Entity) {
 }
 
 player_on_collide_towel :: proc(player, towel: ^Entity) {
-	change_speed(50)
+	change_speed(20)
 }
 
 player_on_collide_crab :: proc(player, crab: ^Entity) {
