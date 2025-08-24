@@ -57,7 +57,7 @@ GameState :: struct {
 	entities:                 [MAX_ENTITIES]Entity,
 	entity_free_list:         [dynamic]int,
 	// Scenes
-	scenes:                   [dynamic]Scene,
+	scene_kind:               SceneKind,
 	// Stuff
 	player_handle:            Handle,
 	run:                      bool,
@@ -113,6 +113,7 @@ Textures :: struct {
 	parasol:             rl.Texture2D,
 	parasol_bounce:      rl.Texture2D,
 	jump_poof:           rl.Texture2D,
+	popsicle:            rl.Texture2D,
 }
 
 game_state: ^GameState
@@ -278,10 +279,18 @@ update :: proc() {
 			parasol_spawner_update(e)
 		case .JUMP_POOF:
 			jump_poof_update(e)
+		case .POPSICLE:
+			popsicle_update(e)
+		case .POPSICLE_SPAWNER:
+			popsicle_spawner_update(e)
+		case .ROCKET_PICKUP:
+			rocket_pickup_update(e)
+		case .ROCKET_PICKUP_SPAWNER:
+			rocket_pickup_spawner_update(e)
 		}
 	}
 
-	switch scene_get().kind {
+	switch game_state.scene_kind {
 	case .GAME:
 		game_scene_update()
 	case .MAIN_MENU:
@@ -339,6 +348,14 @@ draw :: proc() {
 			parasol_spawner_draw(e^)
 		case .JUMP_POOF:
 			jump_poof_draw(e^)
+		case .POPSICLE_SPAWNER:
+			popsicle_spawner_draw(e^)
+		case .POPSICLE:
+			popsicle_draw(e^)
+		case .ROCKET_PICKUP:
+			rocket_pickup_draw(e^)
+		case .ROCKET_PICKUP_SPAWNER:
+			rocket_pickup_spawner_draw(e^)
 		}
 	}
 
@@ -393,7 +410,7 @@ game_init :: proc() {
 		screen_shake_speed = 40.0,
 		sounds = {
 			rocket_sfx = rl.LoadSound("assets/SFX/RocketLaunch_SFX_quick.wav"),
-			jump_sfx = rl.LoadSound("assets/SFX/Sand-Jump.wav"),			
+			jump_sfx = rl.LoadSound("assets/SFX/Sand-Jump.wav"),
 			dog_pain_sfx = rl.LoadSound("assets/SFX/Sad_Dog_Bark_Single.wav"),
 			game_over = rl.LoadSound("assets/SFX/Sad_Dog_Barking.wav"),
 			cooler_box_sfx = rl.LoadSound("assets/SFX/CoolerBox_SFX.wav"),
@@ -405,7 +422,6 @@ game_init :: proc() {
 			rocket_pickup_sfx = rl.LoadSound("assets/SFX/Rocket_pickup.wav"),
 		},
 		soundtrack = rl.LoadMusicStream("assets/SFX/Endless Scamper.mp3"),
-		
 		current_speed = DEFAULT_MOVE_SPEED,
 		target_speed = DEFAULT_MOVE_SPEED,
 		textures = {
@@ -429,14 +445,13 @@ game_init :: proc() {
 			parasol             = rl.LoadTexture("assets/parasol.png"),
 			parasol_bounce      = rl.LoadTexture("assets/parasol-bounce.png"),
 			jump_poof           = rl.LoadTexture("assets/jump-poof.png"),
+			popsicle            = rl.LoadTexture("assets/Popsicle.png"),
 		},
 	}
 
-	
-	if len(game_state.scenes) == 0 {
-		scene_push(.MAIN_MENU)
-	}
-	
+
+	scene_setup(.MAIN_MENU)
+
 	game_hot_reloaded(game_state)
 	rl.PlayMusicStream(game_state.soundtrack)
 	rl.SetSoundVolume(game_state.sounds.jump_sfx, .2)
@@ -475,8 +490,8 @@ game_shutdown :: proc() {
 	rl.UnloadTexture(game_state.textures.parasol)
 	rl.UnloadTexture(game_state.textures.parasol_bounce)
 	rl.UnloadTexture(game_state.textures.jump_poof)
+	rl.UnloadTexture(game_state.textures.popsicle)
 
-	delete(game_state.scenes) // free the scenes array
 	delete(game_state.entity_free_list) // free the entity freelist
 	free(game_state)
 }

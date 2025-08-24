@@ -8,13 +8,6 @@ main_menu_setup :: proc() {
 	entity_create(.PLAY_BUTTON)
 }
 
-main_menu_transition :: proc(scene: ^Scene) {
-}
-
-main_menu_destroy :: proc(dead_scene: Scene) {
-	entity_clear_all()
-}
-
 /*
 * GAME
 */
@@ -47,16 +40,18 @@ game_setup :: proc() {
 	player := entity_create(.PLAYER)
 	game_state.player_handle = player.handle
 
+	game_state.screen_shake_time = 4.0
+	game_state.screen_shake_dropOff = 5.1
+	game_state.screen_shake_speed = 40.0
+	game_state.current_speed = DEFAULT_MOVE_SPEED
+	game_state.target_speed = DEFAULT_MOVE_SPEED
+	game_state.total_distance_metres = 0
+
 	entity_create(.SUN)
 	entity_create(.CRAB_SPAWNER)
 	entity_create(.TOWEL_SPAWNER)
 	entity_create(.PIDGEON_SPAWNER)
 	entity_create(.PARASOL_SPAWNER)
-}
-
-game_transition :: proc(scene: ^Scene) {
-}
-
-game_destroy :: proc(dead_scene: Scene) {
-	main_menu_setup()
+	entity_create(.POPSICLE_SPAWNER)
+	entity_create(.ROCKET_PICKUP_SPAWNER)
 }

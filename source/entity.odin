@@ -25,6 +25,10 @@ EntityKind :: enum {
 	PARASOL,
 	PARASOL_SPAWNER,
 	JUMP_POOF,
+	POPSICLE,
+	POPSICLE_SPAWNER,
+	ROCKET_PICKUP,
+	ROCKET_PICKUP_SPAWNER,
 }
 
 EntityTextureOffset :: enum {
@@ -174,6 +178,7 @@ entity_get :: proc(handle: Handle) -> (entity: ^Entity, ok: bool) #optional_ok {
 }
 
 entity_clear_all :: proc() {
+	fmt.println("destroy")
 	for ent in game_state.scratch.all_entities {
 		entity_destroy(entity_get(ent))
 	}
@@ -250,5 +255,13 @@ entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 		parasol_spawner_setup(e)
 	case .JUMP_POOF:
 		jump_poof_setup(e)
+	case .POPSICLE:
+		popsicle_setup(e)
+	case .POPSICLE_SPAWNER:
+		popsicle_spawner_setup(e)
+	case .ROCKET_PICKUP:
+		rocket_pickup_setup(e)
+	case .ROCKET_PICKUP_SPAWNER:
+		rocket_pickup_spawner_setup(e)
 	}
 }
