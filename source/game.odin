@@ -98,6 +98,7 @@ Textures :: struct {
 	parasol:             rl.Texture2D,
 	parasol_bounce:      rl.Texture2D,
 	jump_poof:           rl.Texture2D,
+	popsicle:            rl.Texture2D,
 }
 
 Sounds :: struct {
@@ -277,6 +278,14 @@ update :: proc() {
 			parasol_spawner_update(e)
 		case .JUMP_POOF:
 			jump_poof_update(e)
+		case .POPSICLE:
+			popsicle_update(e)
+		case .POPSICLE_SPAWNER:
+			popsicle_spawner_update(e)
+		case .ROCKET_PICKUP:
+			rocket_pickup_update(e)
+		case .ROCKET_PICKUP_SPAWNER:
+			rocket_pickup_spawner_update(e)
 		}
 	}
 
@@ -338,6 +347,14 @@ draw :: proc() {
 			parasol_spawner_draw(e^)
 		case .JUMP_POOF:
 			jump_poof_draw(e^)
+		case .POPSICLE_SPAWNER:
+			popsicle_spawner_draw(e^)
+		case .POPSICLE:
+			popsicle_draw(e^)
+		case .ROCKET_PICKUP:
+			rocket_pickup_draw(e^)
+		case .ROCKET_PICKUP_SPAWNER:
+			rocket_pickup_spawner_draw(e^)
 		}
 	}
 
@@ -408,6 +425,7 @@ game_init :: proc() {
 			parasol             = rl.LoadTexture("assets/parasol.png"),
 			parasol_bounce      = rl.LoadTexture("assets/parasol-bounce.png"),
 			jump_poof           = rl.LoadTexture("assets/jump-poof.png"),
+			popsicle            = rl.LoadTexture("assets/Popsicle.png"),
 		},
 		sounds = {
 			rocket_sfx = rl.LoadSound("assets/SFX/RocketLaunch_SFX_quick.wav"),
@@ -462,6 +480,7 @@ game_shutdown :: proc() {
 	rl.UnloadTexture(game_state.textures.parasol)
 	rl.UnloadTexture(game_state.textures.parasol_bounce)
 	rl.UnloadTexture(game_state.textures.jump_poof)
+	rl.UnloadTexture(game_state.textures.popsicle)
 
 	delete(game_state.entity_free_list) // free the entity freelist
 	free(game_state)

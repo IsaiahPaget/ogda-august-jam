@@ -52,4 +52,6 @@ game_setup :: proc() {
 	entity_create(.TOWEL_SPAWNER)
 	entity_create(.PIDGEON_SPAWNER)
 	entity_create(.PARASOL_SPAWNER)
+	entity_create(.POPSICLE_SPAWNER)
+	entity_create(.ROCKET_PICKUP_SPAWNER)
 }

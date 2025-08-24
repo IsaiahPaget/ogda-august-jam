@@ -27,7 +27,8 @@ player_setup :: proc(e: ^Entity) {
 	entity_create(.PLAYER_HEALTH_BAR)
 	e.scale = 0.35
 	e.cur_rockets = 3
-	e.z_index = 3
+	e.max_rockets = 3
+	e.z_index = 2
 }
 
 
@@ -110,8 +111,34 @@ player_update :: proc(e: ^Entity) {
 		case .TOWEL_SPAWNER:
 		case .TOWEL:
 			player_on_collide_towel(entity_a, entity_b)
+		case .POPSICLE_SPAWNER:
+		case .POPSICLE:
+			player_on_collide_popsicle(entity_a, entity_b)
+		case .ROCKET_PICKUP:
+			player_on_collide_rocket_pickup(entity_a, entity_b)
+		case .ROCKET_PICKUP_SPAWNER:
 		}
 	})
+}
+
+player_on_collide_rocket_pickup :: proc(player, popsicle: ^Entity) {
+	if player.cur_rockets + 1 > player.max_rockets {
+		player.cur_rockets = player.max_rockets
+	} else {
+		player.cur_rockets += 1
+	}
+
+	entity_destroy(popsicle)
+}
+
+player_on_collide_popsicle :: proc(player, popsicle: ^Entity) {
+	if player.cur_health + 20 > player.max_health {
+		player.cur_health = player.max_health
+	} else {
+		player.cur_health += 20
+	}
+
+	entity_destroy(popsicle)
 }
 
 player_on_collide_parasol :: proc(player, parasol: ^Entity) {
@@ -217,7 +244,7 @@ init_player_rocket_animation :: proc() -> Animation {
 */
 
 crab_spawner_setup :: proc(e: ^Entity) {
-	e.z_index = 0
+
 	e.spawner_interval_s = 3
 }
 
@@ -297,6 +324,10 @@ crab_update :: proc(e: ^Entity) {
 		case .PIDGEON:
 		case .PARASOL_SPAWNER:
 		case .PARASOL:
+		case .POPSICLE:
+		case .POPSICLE_SPAWNER:
+		case .ROCKET_PICKUP_SPAWNER:
+		case .ROCKET_PICKUP:
 		}
 	})
 }
@@ -343,7 +374,6 @@ background_setup :: proc(e: ^Entity) {
 	e.pos.x = -50
 	e.texture_offset = .CENTER
 	e.animation = init_background_anim()
-	e.z_index = 0
 }
 background_update :: proc(e: ^Entity) {
 	MOVE_SPEED_MULTIPLIER :: 0.8
@@ -378,7 +408,6 @@ foreground_setup :: proc(e: ^Entity) {
 	e.pos.x = -50
 	e.texture_offset = .CENTER
 	e.animation = init_foreground_anim()
-	e.z_index = 2
 }
 
 foreground_update :: proc(e: ^Entity) {
@@ -422,7 +451,6 @@ ground_setup :: proc(e: ^Entity) {
 	}
 	e.collision.offset = .CENTER
 	e.collision.is_active = true
-	e.z_index = 1
 }
 
 ground_update :: proc(e: ^Entity) {
@@ -458,7 +486,6 @@ init_ground_anim :: proc() -> Animation {
 play_button_setup :: proc(e: ^Entity) {
 	e.pos.x = -100
 	e.pos.y = -40
-	e.z_index = 5
 }
 play_button_update :: proc(e: ^Entity) {
 	if rl.IsKeyPressed(.ENTER) {
@@ -486,7 +513,6 @@ sun_setup :: proc(e: ^Entity) {
 	e.pos.y = -50
 	e.scale = 0.25
 	e.animation = init_sun_anim()
-	e.z_index = 1
 }
 
 sun_update :: proc(e: ^Entity) {
@@ -513,7 +539,6 @@ player_health_bar_setup :: proc(e: ^Entity) {
 	e.pos.y = -60
 	e.scale = 0.25
 	e.health_bar_max_width = 50
-	e.z_index = 5
 }
 
 player_health_bar_update :: proc(e: ^Entity) {
@@ -564,7 +589,6 @@ init_jump_poof_anim :: proc() -> Animation {
 */
 
 towel_spawner_setup :: proc(e: ^Entity) {
-	e.z_index = 0
 	e.spawner_interval_s = 3
 }
 
@@ -599,7 +623,6 @@ towel_setup :: proc(e: ^Entity) {
 	e.collision.offset = .BOTTOM
 	e.collision.is_active = true
 	e.scale = 0.75
-	e.z_index = 4
 }
 
 towel_draw :: proc(e: Entity) {
@@ -639,7 +662,6 @@ init_towel_idle_anim :: proc() -> Animation {
 */
 
 pidgeon_spawner_setup :: proc(e: ^Entity) {
-	e.z_index = 0
 	e.spawner_interval_s = 3
 }
 
@@ -675,7 +697,6 @@ pidgeon_setup :: proc(e: ^Entity) {
 	e.collision.is_active = true
 	e.scale = 0.75
 	e.animation.flip_x = true
-	e.z_index = 4
 }
 
 pidgeon_draw :: proc(e: Entity) {
@@ -710,7 +731,6 @@ init_pidgeon_fly_anim :: proc() -> Animation {
 */
 
 parasol_spawner_setup :: proc(e: ^Entity) {
-	e.z_index = 0
 	e.spawner_interval_s = 3
 }
 
@@ -744,7 +764,6 @@ parasol_setup :: proc(e: ^Entity) {
 	e.collision.offset = .CENTER
 	e.collision.is_active = true
 	e.scale = 0.5
-	e.z_index = 4
 }
 
 parasol_draw :: proc(e: Entity) {
@@ -788,5 +807,144 @@ init_parasol_bounce_anim :: proc() -> Animation {
 		frame_count = 3,
 		frame_length = 0.1,
 		kind = .BOUNCE,
+	}
+}
+
+/*
+* POPSICLE SPAWNER
+*/
+
+popsicle_spawner_setup :: proc(e: ^Entity) {
+	e.spawner_interval_s = 3
+}
+
+popsicle_spawner_update :: proc(e: ^Entity) {
+	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
+		e.spawner_interval_s = rand.float64_range(0.5, 2)
+		popsicle := entity_create(.POPSICLE)
+		popsicle.pos = rl.Vector2{300, rand.float32_range(-60, 30)}
+		popsicle.collision.rectangle.x = 300
+		popsicle.collision.rectangle.y = 10
+		e.last_spawn_s = rl.GetTime()
+	}
+}
+
+popsicle_spawner_draw :: proc(e: Entity) {
+	if DEBUG {
+		rl.DrawRectangleV(e.pos, {30, 30}, rl.BLUE)
+	}
+}
+
+/*
+* POPSICLE
+*/
+popsicle_setup :: proc(e: ^Entity) {
+	e.lifespan_s = 10
+	e.animation = init_popsicle_idle_anim()
+	e.texture_offset = .CENTER
+	e.collision.rectangle = rl.Rectangle {
+		width  = 10,
+		height = 10,
+	}
+	e.collision.offset = .CENTER
+	e.collision.is_active = true
+	e.scale = .5
+	e.animation.flip_x = true
+	e.z_index = 10
+}
+
+popsicle_draw :: proc(e: Entity) {
+	entity_draw_default(e)
+}
+
+popsicle_update :: proc(e: ^Entity) {
+
+	MOVE_SPEED_MULTIPLIER :: 1
+
+	if rl.GetTime() - e.created_on >= e.lifespan_s {
+		entity_destroy(e)
+	}
+
+	e.velocity.x = game_state.current_speed * MOVE_SPEED_MULTIPLIER
+	e.pos += e.velocity * rl.GetFrameTime()
+
+	collision_box_update(e)
+}
+
+init_popsicle_idle_anim :: proc() -> Animation {
+	return Animation {
+		texture = game_state.textures.popsicle,
+		frame_count = 2,
+		frame_length = .1,
+		kind = .IDLE,
+	}
+}
+
+/*
+* rocket_pickup
+*/
+rocket_pickup_setup :: proc(e: ^Entity) {
+	e.lifespan_s = 10
+	e.animation = init_rocket_pickup_idle_anim()
+	e.texture_offset = .CENTER
+	e.collision.rectangle = rl.Rectangle {
+		width  = 10,
+		height = 10,
+	}
+	e.collision.offset = .CENTER
+	e.collision.is_active = true
+	e.scale = .5
+	e.animation.flip_x = true
+	e.z_index = 10
+}
+
+rocket_pickup_draw :: proc(e: Entity) {
+	entity_draw_default(e)
+}
+
+rocket_pickup_update :: proc(e: ^Entity) {
+
+	MOVE_SPEED_MULTIPLIER :: 1
+
+	if rl.GetTime() - e.created_on >= e.lifespan_s {
+		entity_destroy(e)
+	}
+
+	e.velocity.x = game_state.current_speed * MOVE_SPEED_MULTIPLIER
+	e.pos += e.velocity * rl.GetFrameTime()
+
+	collision_box_update(e)
+}
+
+init_rocket_pickup_idle_anim :: proc() -> Animation {
+	return Animation {
+		texture = game_state.textures.rocket_icon_powerup,
+		frame_count = 1,
+		kind = .NIL,
+	}
+}
+
+/*
+* ROCKET_PICKUP SPAWNER
+*/
+
+rocket_pickup_spawner_setup :: proc(e: ^Entity) {
+	e.spawner_interval_s = 3
+}
+
+rocket_pickup_spawner_update :: proc(e: ^Entity) {
+	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
+		e.spawner_interval_s = rand.float64_range(0.5, 2)
+		rocket_pickup := entity_create(.ROCKET_PICKUP)
+		rocket_pickup.pos = rl.Vector2{300, rand.float32_range(20, 50)}
+		rocket_pickup.collision.rectangle.x = 300
+		rocket_pickup.collision.rectangle.y = 10
+		e.last_spawn_s = rl.GetTime()
+	}
+}
+
+rocket_pickup_spawner_draw :: proc(e: Entity) {
+	if DEBUG {
+		rl.DrawRectangleV(e.pos, {30, 30}, rl.BLUE)
 	}
 }
