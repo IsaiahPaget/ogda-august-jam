@@ -34,9 +34,12 @@ player_update :: proc(e: ^Entity) {
 	if rl.IsKeyPressed(.SPACE) && e.is_on_ground {
 		e.velocity.y = PLAYER_JUMP_FORCE // negative because the world is drawn from top to.CENTER
 		e.animation = init_player_jump_animation()
+		rl.PlaySound(game_state.sounds.jump_sfx)
 		e.is_on_ground = false
 	} else if rl.IsKeyPressed(.SPACE) && !e.is_on_ground {
-		e.animation = init_player_rocket_animation()
+		e.animation = init_player_rocket_animation()		
+		rl.PlaySound(game_state.sounds.rocket_sfx)
+
 	} else if (e.velocity.y > 0 && e.animation.kind != .ROCKET) {
 		e.animation = init_player_fall_animation()
 	}
@@ -48,6 +51,7 @@ player_update :: proc(e: ^Entity) {
 	}
 
 	if e.cur_health <= 0 {
+		rl.PlaySound(game_state.sounds.game_over)
 		scene_pop()
 	}
 
@@ -75,6 +79,7 @@ player_update :: proc(e: ^Entity) {
 
 player_on_collide_crab :: proc(player, crab: ^Entity) {
 	do_screen_shake()
+	rl.PlaySound(game_state.sounds.dog_pain_sfx)
 	change_speed(50)
 	entity_destroy(crab)
 }
