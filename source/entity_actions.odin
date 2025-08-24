@@ -19,6 +19,10 @@ player_setup :: proc(e: ^Entity) {
 	e.collision.is_active = true
 	e.animation = init_player_run_animation()
 	e.has_physics = true
+
+	e.max_health = 100
+	e.cur_health = e.max_health
+	entity_create(.PLAYER_HEALTH_BAR)
 }
 
 
@@ -37,12 +41,18 @@ player_update :: proc(e: ^Entity) {
 		}
 	}
 
+	if e.cur_health <= 0 {
+		scene_pop()
+	}
+
+	e.cur_health -= SUN_DAMAGE * rl.GetFrameTime()
+
 	e.pos += e.velocity * rl.GetFrameTime()
 
 	process_collisions(e, proc(entity_a, entity_b: ^Entity) {
 		switch entity_b.kind {
 		case .CRAB:
-			entity_destroy(entity_b)
+			player_on_collide_crab(entity_a, entity_b)
 		case .GROUND:
 			player_on_collide_ground(entity_a, entity_b)
 		case .NIL:
@@ -51,10 +61,17 @@ player_update :: proc(e: ^Entity) {
 		case .CRAB_SPAWNER:
 		case .FOREGROUND:
 		case .BACKGROUND:
+		case .SUN:
+		case .PLAYER_HEALTH_BAR:
 		}
 	})
 }
-player_on_collide_ground :: proc(player: ^Entity, ground: ^Entity) {
+player_on_collide_crab :: proc(player, crab: ^Entity) {
+	do_screen_shake()
+	change_speed(50)
+	entity_destroy(crab)
+}
+player_on_collide_ground :: proc(player, ground: ^Entity) {
 	player.is_on_ground = true
 	player.velocity.y = 0
 	entity_move_and_slide(player, ground)
@@ -124,8 +141,8 @@ crab_setup :: proc(e: ^Entity) {
 	e.lifespan_s = 10
 	e.texture_offset = .BOTTOM
 	e.collision.rectangle = rl.Rectangle {
-		width  = 15,
-		height = 15,
+		width  = 10,
+		height = 10,
 	}
 	e.collision.offset = .BOTTOM
 	e.collision.is_active = true
@@ -139,7 +156,7 @@ crab_draw :: proc(e: Entity) {
 
 crab_update :: proc(e: ^Entity) {
 
-	MOVE_SPEED :: -100
+	MOVE_SPEED_MULTIPLIER :: 1
 
 	if rl.GetTime() - e.created_on >= e.lifespan_s {
 		entity_destroy(e)
@@ -151,7 +168,7 @@ crab_update :: proc(e: ^Entity) {
 		}
 	}
 
-	e.velocity.x = MOVE_SPEED
+	e.velocity.x = game_state.move_speed * MOVE_SPEED_MULTIPLIER
 	e.pos += e.velocity * rl.GetFrameTime()
 
 	process_collisions(e, proc(entity_a, entity_b: ^Entity) {
@@ -165,6 +182,8 @@ crab_update :: proc(e: ^Entity) {
 		case .PLAYER:
 		case .CRAB_SPAWNER:
 		case .BACKGROUND:
+		case .SUN:
+		case .PLAYER_HEALTH_BAR:
 		}
 	})
 }
@@ -188,19 +207,19 @@ init_crab_run_anim :: proc() -> Animation {
 
 // ground helper
 ground_replace :: proc(e: ^Entity) {
-	if e.pos.x < -f32(e.animation.texture.width) - 50 {
+	if e.pos.x <= -f32(e.animation.texture.width) - 50 {
 		// Instead of resetting to .initial_position,
 		// move this background tile just after the rightmost one
-		rightmost_x: f32 = -999999
+		rightmost_x: f32 = -999999 // somewhere way off to the left of the screen
 		for handle in entity_get_all() {
 			g := entity_get(handle)
-			if g.kind == .BACKGROUND && g != e {
+			if g.kind == e.kind && g != e {
 				if g.pos.x > rightmost_x {
-					rightmost_x = g.pos.x - 2
+					rightmost_x = g.pos.x
 				}
 			}
 		}
-		e.pos.x = rightmost_x + f32(e.animation.texture.width)
+		e.pos.x = rightmost_x + f32(e.animation.texture.width - 3)
 	}
 }
 /*
@@ -213,8 +232,8 @@ background_setup :: proc(e: ^Entity) {
 	e.animation = init_background_anim()
 }
 background_update :: proc(e: ^Entity) {
-	MOVE_SPEED :: -80
-	e.velocity = rl.Vector2{MOVE_SPEED, 0}
+	MOVE_SPEED_MULTIPLIER :: 0.8
+	e.velocity = rl.Vector2{game_state.move_speed * MOVE_SPEED_MULTIPLIER, 0}
 	e.pos += e.velocity * rl.GetFrameTime()
 
 	ground_replace(e)
@@ -252,24 +271,12 @@ foreground_setup :: proc(e: ^Entity) {
 }
 
 foreground_update :: proc(e: ^Entity) {
-	MOVE_SPEED :: -110
-	e.velocity = rl.Vector2{MOVE_SPEED, 0}
+	MOVE_SPEED_MULTIPLIER :: 1.10
+	e.velocity = rl.Vector2{game_state.move_speed * MOVE_SPEED_MULTIPLIER, 0}
 	e.pos += e.velocity * rl.GetFrameTime()
 
-	if e.pos.x < -f32(e.animation.texture.width) - 50 {
-		// Instead of resetting to .initial_position,
-		// move this foreground tile just after the rightmost one
-		rightmost_x: f32 = -999999
-		for handle in entity_get_all() {
-			g := entity_get(handle)
-			if g.kind == .FOREGROUND && g != e {
-				if g.pos.x > rightmost_x {
-					rightmost_x = g.pos.x - 2
-				}
-			}
-		}
-		e.pos.x = rightmost_x + f32(e.animation.texture.width)
-	}
+	ground_replace(e)
+
 	collision_box_update(e)
 }
 
@@ -311,24 +318,12 @@ ground_setup :: proc(e: ^Entity) {
 }
 
 ground_update :: proc(e: ^Entity) {
-	MOVE_SPEED :: -100
-	e.velocity = rl.Vector2{MOVE_SPEED, 0}
+	MOVE_SPEED_MULTIPLIER :: 1
+	e.velocity = rl.Vector2{game_state.move_speed * MOVE_SPEED_MULTIPLIER, 0}
 	e.pos += e.velocity * rl.GetFrameTime()
 
-	if e.pos.x < -f32(e.animation.texture.width) - 50 {
-		// Instead of resetting to .initial_position,
-		// move this ground tile just after the rightmost one
-		rightmost_x: f32 = -999999
-		for handle in entity_get_all() {
-			g := entity_get(handle)
-			if g.kind == .GROUND && g != e {
-				if g.pos.x > rightmost_x {
-					rightmost_x = g.pos.x - 2
-				}
-			}
-		}
-		e.pos.x = rightmost_x + f32(e.animation.texture.width)
-	}
+	ground_replace(e)
+
 	collision_box_update(e)
 }
 
@@ -377,3 +372,49 @@ play_button_draw :: proc(e: Entity) {
 // 		kind = .NIL,
 // 	}
 // }
+
+/*
+* SUN
+*/
+sun_setup :: proc(e: ^Entity) {
+	e.pos.x = 150
+	e.pos.y = -50
+	e.scale = 0.25
+	e.animation = init_sun_anim()
+}
+
+sun_update :: proc(e: ^Entity) {
+
+}
+sun_draw :: proc(e: Entity) {
+	entity_draw_default(e)
+}
+init_sun_anim :: proc() -> Animation {
+	// TODO: make the sun stay angry after x amount of time
+	return Animation {
+		texture = rl.LoadTexture("assets/sun.png"),
+		frame_count = 4,
+		frame_length = 10,
+		kind = .IDLE,
+	}
+}
+
+/*
+* player_health_bar
+*/
+player_health_bar_setup :: proc(e: ^Entity) {
+	e.pos.x = -50
+	e.pos.y = -60
+	e.scale = 0.25
+	e.health_bar_max_width = 50
+}
+
+player_health_bar_update :: proc(e: ^Entity) {
+	player := get_player()
+	
+	player_health_percent := player.cur_health / player.max_health
+	e.health_bar_width = e.health_bar_max_width * player_health_percent
+}
+player_health_bar_draw :: proc(e: Entity) {
+	rl.DrawRectangleV(e.pos, rl.Vector2{e.health_bar_width, 20}, rl.RED)
+}

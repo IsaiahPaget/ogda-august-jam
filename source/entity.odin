@@ -16,6 +16,8 @@ EntityKind :: enum {
 	BACKGROUND,
 	PLAY_BUTTON,
 	CRAB_SPAWNER,
+	SUN,
+	PLAYER_HEALTH_BAR,
 }
 
 EntityTextureOffset :: enum {
@@ -27,25 +29,30 @@ EntityTextureOffset :: enum {
 }
 
 Entity :: struct {
-	handle:             Handle,
-	kind:               EntityKind,
-	collision:          CollisionShape,
-	pos:                rl.Vector2,
-	velocity:           rl.Vector2,
-	rotation:           f32,
-	scale:              f32,
-	has_physics:        bool,
-	texture_offset:     EntityTextureOffset,
-	animation:          Animation,
-	hidden:             bool,
-	lifespan_s:         f64,
-	is_on_ground:       bool,
-	created_on:         f64,
+	handle:               Handle,
+	kind:                 EntityKind,
+	collision:            CollisionShape,
+	pos:                  rl.Vector2,
+	velocity:             rl.Vector2,
+	rotation:             f32,
+	scale:                f32,
+	has_physics:          bool,
+	texture_offset:       EntityTextureOffset,
+	animation:            Animation,
+	hidden:               bool,
+	lifespan_s:           f64,
+	is_on_ground:         bool,
+	created_on:           f64,
 
 	// SPAWNER
-	last_spawn_s:       f64, // since game init
-	spawner_interval_s: f64,
+	last_spawn_s:         f64, // since game init
+	spawner_interval_s:   f64,
 
+	// Player
+	cur_health:           f32,
+	max_health:           f32,
+	health_bar_width:     f32,
+	health_bar_max_width: f32,
 }
 
 
@@ -208,5 +215,9 @@ entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 		foreground_setup(e)
 	case .BACKGROUND:
 		background_setup(e)
+	case .SUN:
+		sun_setup(e)
+	case .PLAYER_HEALTH_BAR:
+		player_health_bar_setup(e)
 	}
 }

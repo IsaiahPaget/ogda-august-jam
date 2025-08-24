@@ -47,6 +47,7 @@ game_setup :: proc(scene: ^Scene) {
 	player := entity_create(.PLAYER)
 	game_state.player_handle = player.handle
 
+	entity_create(.SUN)
 	entity_create(.CRAB_SPAWNER)
 }
 
