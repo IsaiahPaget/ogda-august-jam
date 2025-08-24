@@ -393,7 +393,7 @@ game_init :: proc() {
 		screen_shake_speed = 40.0,
 		sounds = {
 			rocket_sfx = rl.LoadSound("assets/SFX/RocketLaunch_SFX_quick.wav"),
-			jump_sfx = rl.LoadSound("assets/SFX/Sand-Jump.wav"),
+			jump_sfx = rl.LoadSound("assets/SFX/Sand-Jump.wav"),			
 			dog_pain_sfx = rl.LoadSound("assets/SFX/Sad_Dog_Bark_Single.wav"),
 			game_over = rl.LoadSound("assets/SFX/Sad_Dog_Barking.wav"),
 			cooler_box_sfx = rl.LoadSound("assets/SFX/CoolerBox_SFX.wav"),
@@ -405,6 +405,7 @@ game_init :: proc() {
 			rocket_pickup_sfx = rl.LoadSound("assets/SFX/Rocket_pickup.wav"),
 		},
 		soundtrack = rl.LoadMusicStream("assets/SFX/Endless Scamper.mp3"),
+		
 		current_speed = DEFAULT_MOVE_SPEED,
 		target_speed = DEFAULT_MOVE_SPEED,
 		textures = {
@@ -438,6 +439,8 @@ game_init :: proc() {
 	
 	game_hot_reloaded(game_state)
 	rl.PlayMusicStream(game_state.soundtrack)
+	rl.SetSoundVolume(game_state.sounds.jump_sfx, .2)
+	rl.SetSoundVolume(game_state.sounds.seagull_airborne_sfx, .4)
 }
 
 @(export)
