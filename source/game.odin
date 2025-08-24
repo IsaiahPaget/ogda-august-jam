@@ -114,6 +114,7 @@ Textures :: struct {
 	parasol_bounce:      rl.Texture2D,
 	jump_poof:           rl.Texture2D,
 	popsicle:            rl.Texture2D,
+	title:               rl.Texture2D,
 }
 
 game_state: ^GameState
@@ -446,6 +447,7 @@ game_init :: proc() {
 			parasol_bounce      = rl.LoadTexture("assets/parasol-bounce.png"),
 			jump_poof           = rl.LoadTexture("assets/jump-poof.png"),
 			popsicle            = rl.LoadTexture("assets/Popsicle.png"),
+			title               = rl.LoadTexture("assets/CorgiTitle.png"),
 		},
 	}
 
@@ -455,6 +457,8 @@ game_init :: proc() {
 	game_hot_reloaded(game_state)
 	rl.PlayMusicStream(game_state.soundtrack)
 	rl.SetSoundVolume(game_state.sounds.jump_sfx, .2)
+	rl.SetSoundVolume(game_state.sounds.popsicle_sfx, 1.2)
+	rl.SetSoundVolume(game_state.sounds.rocket_pickup_sfx, .2)
 	rl.SetSoundVolume(game_state.sounds.seagull_airborne_sfx, .4)
 }
 
@@ -491,6 +495,7 @@ game_shutdown :: proc() {
 	rl.UnloadTexture(game_state.textures.parasol_bounce)
 	rl.UnloadTexture(game_state.textures.jump_poof)
 	rl.UnloadTexture(game_state.textures.popsicle)
+	rl.UnloadTexture(game_state.textures.title)
 
 	delete(game_state.entity_free_list) // free the entity freelist
 	free(game_state)

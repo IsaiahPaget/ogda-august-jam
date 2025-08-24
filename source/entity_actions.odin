@@ -28,7 +28,7 @@ player_setup :: proc(e: ^Entity) {
 	e.scale = 0.35
 	e.cur_rockets = 3
 	e.max_rockets = 3
-	e.z_index = 2
+	e.z_index = 4
 }
 
 
@@ -65,7 +65,7 @@ player_update :: proc(e: ^Entity) {
 		e.velocity = rl.Vector2{50, PLAYER_JUMP_FORCE} // apply up negative because world is drawn top to bottom
 		e.cur_rockets -= 1
 		rl.PlaySound(game_state.sounds.rocket_sfx)
-		do_screen_shake(4, 5.1,40)
+		do_screen_shake(4, 5.1, 40)
 
 		fmt.assertf(e.cur_rockets > -1, "some how you spent zero rockets")
 	} else if (e.velocity.y > 0 && e.animation.kind != .ROCKET) {
@@ -104,7 +104,7 @@ player_update :: proc(e: ^Entity) {
 		case .JUMP_POOF:
 		case .PARASOL_SPAWNER:
 		case .PARASOL:
-			player_on_collide_parasol(entity_a,entity_b)
+			player_on_collide_parasol(entity_a, entity_b)
 		case .PIDGEON_SPAWNER:
 		case .PIDGEON:
 			player_on_collide_pidgeon(entity_a, entity_b)
@@ -121,14 +121,15 @@ player_update :: proc(e: ^Entity) {
 	})
 }
 
-player_on_collide_rocket_pickup :: proc(player, popsicle: ^Entity) {
+player_on_collide_rocket_pickup :: proc(player, rocket: ^Entity) {
 	if player.cur_rockets + 1 > player.max_rockets {
 		player.cur_rockets = player.max_rockets
 	} else {
 		player.cur_rockets += 1
 	}
 
-	entity_destroy(popsicle)
+	rl.PlaySound(game_state.sounds.rocket_pickup_sfx)
+	entity_destroy(rocket)
 }
 
 player_on_collide_popsicle :: proc(player, popsicle: ^Entity) {
@@ -138,11 +139,13 @@ player_on_collide_popsicle :: proc(player, popsicle: ^Entity) {
 		player.cur_health += 20
 	}
 
+	rl.PlaySound(game_state.sounds.popsicle_sfx)
+
 	entity_destroy(popsicle)
 }
 
 player_on_collide_parasol :: proc(player, parasol: ^Entity) {
-	if player.velocity.y > 0 && player.pos.y < parasol.pos.y - 14{ // because remember it's flipped on the Y
+	if player.velocity.y > 0 && player.pos.y < parasol.pos.y - 14 { 	// because remember it's flipped on the Y
 		player.velocity.y = 0
 		player.velocity.y += -370 // needs to be high to overcome gravity
 		player.animation = init_player_jump_animation()
@@ -273,7 +276,7 @@ crab_spawner_draw :: proc(e: Entity) {
 */
 crab_setup :: proc(e: ^Entity) {
 	e.animation = init_crab_run_anim()
-	e.z_index = 4
+	e.z_index = 5
 	e.lifespan_s = 10
 	e.texture_offset = .BOTTOM
 	e.collision.rectangle = rl.Rectangle {
@@ -412,7 +415,7 @@ foreground_setup :: proc(e: ^Entity) {
 	e.pos.x = -50
 	e.texture_offset = .CENTER
 	e.animation = init_foreground_anim()
-	e.z_index = -1
+	e.z_index = 1
 }
 
 foreground_update :: proc(e: ^Entity) {
@@ -500,8 +503,8 @@ play_button_update :: proc(e: ^Entity) {
 	}
 }
 play_button_draw :: proc(e: Entity) {
-	rl.DrawRectangleV(rl.Vector2{e.pos.x, e.pos.y}, rl.Vector2{200, 80}, rl.DARKGRAY)
-	rl.DrawText("Press enter to play", -40, 0, 8, rl.WHITE)
+	rl.DrawTextureV(game_state.textures.title, rl.Vector2{-150, -150}, rl.WHITE)
+	rl.DrawText("Press enter to play", -60, 0, 12, rl.WHITE)
 }
 
 // init_play_button_anim :: proc() -> Animation {
@@ -517,8 +520,8 @@ play_button_draw :: proc(e: Entity) {
 */
 sun_setup :: proc(e: ^Entity) {
 	e.pos.x = 150
-	e.pos.y = -50
-	e.scale = 0.25
+	e.pos.y = -60
+	e.scale = 0.5
 	e.animation = init_sun_anim()
 	e.z_index = 1
 }
@@ -790,7 +793,7 @@ parasol_update :: proc(e: ^Entity) {
 	MOVE_SPEED_MULTIPLIER :: 1
 	BOUNCE_DURATION_S :: .3
 
-	if e.is_bounce && rl.GetTime() - e.last_bounce_s >= BOUNCE_DURATION_S{
+	if e.is_bounce && rl.GetTime() - e.last_bounce_s >= BOUNCE_DURATION_S {
 		e.animation = init_parasol_idle_anim()
 		e.is_bounce = false
 	}
