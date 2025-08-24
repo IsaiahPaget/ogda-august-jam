@@ -61,8 +61,8 @@ scene_setup :: proc(scene: ^Scene, kind: SceneKind) {
 
 	switch kind {
 	case .MAIN_MENU:
-		main_menu_setup(scene)
+		main_menu_setup()
 	case .GAME:
-		game_setup(scene)
+		game_setup()
 	}
 }

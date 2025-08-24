@@ -403,7 +403,7 @@ init_sun_anim :: proc() -> Animation {
 * player_health_bar
 */
 player_health_bar_setup :: proc(e: ^Entity) {
-	e.pos.x = -50
+	e.pos.x = -150
 	e.pos.y = -60
 	e.scale = 0.25
 	e.health_bar_max_width = 50
