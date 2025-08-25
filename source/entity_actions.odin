@@ -7,10 +7,10 @@ import rl "vendor:raylib"
 * PLAYER
 */
 
-PLAYER_STARTING_POSITION :: -75
 player_setup :: proc(e: ^Entity) {
-	e.pos.x = PLAYER_STARTING_POSITION
+	e.pos.x = 0
 	e.pos.y = 45
+	e.velocity.x = DEFAULT_MOVE_SPEED
 	e.texture_offset = .CENTER
 	e.collision.rectangle = rl.Rectangle {
 		x      = e.pos.x,
@@ -35,7 +35,6 @@ player_setup :: proc(e: ^Entity) {
 player_update :: proc(e: ^Entity) {
 	fmt.assertf(e != nil, "player missing", e)
 	PLAYER_JUMP_FORCE :: -250
-	e.velocity.x = DEFAULT_MOVE_SPEED
 
 	if rl.IsKeyPressed(.SPACE) && e.is_on_ground {
 		e.velocity.y = PLAYER_JUMP_FORCE // negative because the world is drawn from top to.CENTER
@@ -46,7 +45,8 @@ player_update :: proc(e: ^Entity) {
 		e.is_on_ground = false
 	} else if rl.IsKeyPressed(.SPACE) && !e.is_on_ground && e.cur_rockets > 0 {
 		e.animation = init_player_rocket_animation()
-		e.velocity = rl.Vector2{50, PLAYER_JUMP_FORCE} // apply up negative because world is drawn top to bottom
+		e.velocity.y = PLAYER_JUMP_FORCE // apply up negative because world is drawn top to bottom
+		player_set_speed(e, 50)
 		e.cur_rockets -= 1
 		rl.PlaySound(game_state.sounds.rocket_sfx)
 		do_screen_shake(4, 5.1, 40)
@@ -61,6 +61,8 @@ player_update :: proc(e: ^Entity) {
 			e.velocity.y += get_applied_gravity()
 		}
 	}
+
+	player_set_speed(e,-0.05)
 
 	if e.cur_health <= 0 {
 		rl.PlaySound(game_state.sounds.game_over)
@@ -106,6 +108,9 @@ player_update :: proc(e: ^Entity) {
 }
 
 player_on_collide_rocket_pickup :: proc(player, rocket: ^Entity) {
+	if player.cur_rockets == player.max_rockets {
+		return
+	}
 	if player.cur_rockets + 1 > player.max_rockets {
 		player.cur_rockets = player.max_rockets
 	} else {
@@ -143,24 +148,43 @@ player_on_collide_parasol :: proc(player, parasol: ^Entity) {
 player_on_collide_pidgeon :: proc(player, pidgeon: ^Entity) {
 	do_screen_shake(1.5, 2, 60)
 	pidgeon.velocity.y += -50
+	player_set_speed(player, -5)
 	rl.PlaySound(game_state.sounds.seagull_airborne_sfx)
 }
 
 player_on_collide_towel :: proc(player, towel: ^Entity) {
-	player.velocity.x += 1
+	player_set_speed(player, 3)
+	towel.collision.is_active = false
 }
 
 player_on_collide_crab :: proc(player, crab: ^Entity) {
 	do_screen_shake(1.5, 2, 60)
-	crab.velocity.y += -300
+
+	crab.velocity.y += -250
+	crab.is_on_ground = false
+
+	player_set_speed(player, -10)
+	crab.collision.is_active = false // deactivate collider so that you don't collide with it multiple times
 	rl.PlaySound(game_state.sounds.dog_pain_sfx)
 }
 
 player_on_collide_ground :: proc(player, ground: ^Entity) {
 	player.is_on_ground = true
-	player.velocity.xy = 0
+	player.velocity.y = 0
 	player.animation = init_player_run_animation()
 	entity_move_and_slide(player, ground)
+}
+
+player_reset_speed :: proc(player: ^Entity) {
+	player.velocity.x = DEFAULT_MOVE_SPEED
+}
+
+player_set_speed :: proc(player: ^Entity, speed: f32) {
+	if player.velocity.x <= MIN_SPEED {
+		player.velocity.x = MIN_SPEED
+	} else {
+		player.velocity.x += speed
+	}
 }
 
 player_draw :: proc(e: Entity) {
@@ -170,7 +194,7 @@ player_draw :: proc(e: Entity) {
 	for i in 0 ..< e.cur_rockets {
 		rl.DrawTextureV(
 			texture,
-			rl.Vector2{f32(-150 + (15 * i32(i))), 60}, //magic numbers don't mind me
+			rl.Vector2{e.pos.x - 150 + (15 * f32(i)), e.pos.y + 10}, //magic numbers don't mind me
 			rl.WHITE,
 		)
 	}
@@ -233,14 +257,15 @@ init_player_rocket_animation :: proc() -> Animation {
 
 crab_spawner_setup :: proc(e: ^Entity) {
 	e.z_index = 0
-	e.spawner_interval_s = 3
+	e.spawner_interval_s = rand.float64_range(0, 3)
 }
 
 crab_spawner_update :: proc(e: ^Entity) {
+	player := get_player()
 	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
 		e.spawner_interval_s = rand.float64_range(0.5, 2)
 		crab := entity_create(.CRAB)
-		crab.pos = rl.Vector2{300, 20}
+		crab.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, 20}
 		crab.collision.rectangle.x = 110
 		crab.collision.rectangle.y = 10
 		e.last_spawn_s = rl.GetTime()
@@ -277,7 +302,6 @@ crab_draw :: proc(e: Entity) {
 
 crab_update :: proc(e: ^Entity) {
 
-	MOVE_SPEED_MULTIPLIER :: 1.1
 
 	if rl.GetTime() - e.created_on >= e.lifespan_s {
 		entity_destroy(e)
@@ -289,7 +313,7 @@ crab_update :: proc(e: ^Entity) {
 		}
 	}
 
-	e.velocity.x = game_state.current_speed * MOVE_SPEED_MULTIPLIER
+	e.velocity.x = -10
 	e.pos += e.velocity * rl.GetFrameTime()
 
 	process_collisions(e, proc(entity_a, entity_b: ^Entity) {
@@ -339,7 +363,8 @@ init_crab_run_anim :: proc() -> Animation {
 
 // ground helper
 ground_replace :: proc(e: ^Entity) {
-	if e.pos.x <= -f32(e.animation.texture.width) - 50 {
+	player := get_player()
+	if e.pos.x <= player.pos.x - f32(e.animation.texture.width) - 50  {
 		// Instead of resetting to .initial_position,
 		// move this background tile just after the rightmost one
 		rightmost_x: f32 = -999999 // somewhere way off to the left of the screen
@@ -359,14 +384,14 @@ ground_replace :: proc(e: ^Entity) {
 */
 background_setup :: proc(e: ^Entity) {
 	e.pos.y = 30
-	e.pos.x = -50
+	e.pos.x = -150
 	e.texture_offset = .CENTER
 	e.animation = init_background_anim()
 	e.z_index = -2
 }
 background_update :: proc(e: ^Entity) {
-	MOVE_SPEED_MULTIPLIER :: 0.8
-	e.velocity = rl.Vector2{game_state.current_speed * MOVE_SPEED_MULTIPLIER, 0}
+	player := get_player()
+	e.velocity.x = 10 * (player.velocity.x / DEFAULT_MOVE_SPEED)
 	e.pos += e.velocity * rl.GetFrameTime()
 
 	ground_replace(e)
@@ -394,15 +419,15 @@ init_background_anim :: proc() -> Animation {
 */
 foreground_setup :: proc(e: ^Entity) {
 	e.pos.y = 90
-	e.pos.x = -50
+	e.pos.x = -150
 	e.texture_offset = .CENTER
 	e.animation = init_foreground_anim()
 	e.z_index = 1
 }
 
 foreground_update :: proc(e: ^Entity) {
-	MOVE_SPEED_MULTIPLIER :: 1.10
-	e.velocity = rl.Vector2{game_state.current_speed * MOVE_SPEED_MULTIPLIER, 0}
+	player := get_player()
+	e.velocity.x = -10 * (player.velocity.x / DEFAULT_MOVE_SPEED)
 	e.pos += e.velocity * rl.GetFrameTime()
 
 	ground_replace(e)
@@ -430,7 +455,7 @@ init_foreground_anim :: proc() -> Animation {
 */
 ground_setup :: proc(e: ^Entity) {
 	e.pos.y = 75
-	e.pos.x = -50
+	e.pos.x = -150
 	e.texture_offset = .CENTER
 	e.animation = init_ground_anim()
 	e.collision.rectangle = rl.Rectangle {
@@ -445,8 +470,6 @@ ground_setup :: proc(e: ^Entity) {
 }
 
 ground_update :: proc(e: ^Entity) {
-	MOVE_SPEED_MULTIPLIER :: 1
-	e.velocity = rl.Vector2{game_state.current_speed * MOVE_SPEED_MULTIPLIER, 0}
 	e.pos += e.velocity * rl.GetFrameTime()
 
 	ground_replace(e)
@@ -509,7 +532,9 @@ sun_setup :: proc(e: ^Entity) {
 }
 
 sun_update :: proc(e: ^Entity) {
-
+	player := get_player()
+	e.pos.x = player.pos.x + 150
+	e.pos.y = player.pos.y - 100
 }
 sun_draw :: proc(e: Entity) {
 	entity_draw_default(e)
@@ -528,8 +553,6 @@ init_sun_anim :: proc() -> Animation {
 * PLAYER_HEALTH_BAR
 */
 player_health_bar_setup :: proc(e: ^Entity) {
-	e.pos.x = -150
-	e.pos.y = -60
 	e.scale = 0.25
 	e.health_bar_max_width = 50
 	e.z_index = 12
@@ -540,6 +563,9 @@ player_health_bar_update :: proc(e: ^Entity) {
 
 	player_health_percent := player.cur_health / player.max_health
 	e.health_bar_width = e.health_bar_max_width * player_health_percent
+	e.pos = player.pos
+	e.pos.x -= 150
+	e.pos.y -= 100
 }
 player_health_bar_draw :: proc(e: Entity) {
 	rl.DrawRectangleV(e.pos, rl.Vector2{e.health_bar_width, 20}, rl.RED)
@@ -561,7 +587,6 @@ jump_poof_update :: proc(e: ^Entity) {
 		entity_destroy(e)
 	}
 
-	e.velocity.x = game_state.current_speed
 	e.pos += e.velocity * rl.GetFrameTime()
 }
 jump_poof_draw :: proc(e: Entity) {
@@ -588,10 +613,11 @@ towel_spawner_setup :: proc(e: ^Entity) {
 }
 
 towel_spawner_update :: proc(e: ^Entity) {
+	player := get_player()
 	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
 		e.spawner_interval_s = rand.float64_range(1, 3)
 		towel := entity_create(.TOWEL)
-		towel.pos = rl.Vector2{300, 70}
+		towel.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, 70}
 		towel.collision.rectangle.x = 110
 		towel.collision.rectangle.y = 10
 		e.last_spawn_s = rl.GetTime()
@@ -627,14 +653,9 @@ towel_draw :: proc(e: Entity) {
 
 towel_update :: proc(e: ^Entity) {
 
-	MOVE_SPEED_MULTIPLIER :: 1
-
 	if rl.GetTime() - e.created_on >= e.lifespan_s {
 		entity_destroy(e)
 	}
-
-	e.velocity.x = game_state.current_speed * MOVE_SPEED_MULTIPLIER
-	e.pos += e.velocity * rl.GetFrameTime()
 
 	collision_box_update(e)
 }
@@ -659,14 +680,15 @@ init_towel_idle_anim :: proc() -> Animation {
 
 pidgeon_spawner_setup :: proc(e: ^Entity) {
 	e.z_index = 0
-	e.spawner_interval_s = 3
+	e.spawner_interval_s = rand.float64_range(0, 3)
 }
 
 pidgeon_spawner_update :: proc(e: ^Entity) {
+	player := get_player()
 	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
 		e.spawner_interval_s = rand.float64_range(0.5, 2)
 		pidgeon := entity_create(.PIDGEON)
-		pidgeon.pos = rl.Vector2{300, rand.float32_range(-60, 30)}
+		pidgeon.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, rand.float32_range(-60, 30)}
 		pidgeon.collision.rectangle.x = 300
 		pidgeon.collision.rectangle.y = 10
 		e.last_spawn_s = rl.GetTime()
@@ -703,13 +725,11 @@ pidgeon_draw :: proc(e: Entity) {
 
 pidgeon_update :: proc(e: ^Entity) {
 
-	MOVE_SPEED_MULTIPLIER :: 1.3
-
 	if rl.GetTime() - e.created_on >= e.lifespan_s {
 		entity_destroy(e)
 	}
 
-	e.velocity.x = game_state.current_speed * MOVE_SPEED_MULTIPLIER
+	e.velocity.x = -10
 	e.pos += e.velocity * rl.GetFrameTime()
 
 	collision_box_update(e)
@@ -730,14 +750,15 @@ init_pidgeon_fly_anim :: proc() -> Animation {
 
 parasol_spawner_setup :: proc(e: ^Entity) {
 	e.z_index = 0
-	e.spawner_interval_s = 3
+	e.spawner_interval_s = rand.float64_range(0, 3)
 }
 
 parasol_spawner_update :: proc(e: ^Entity) {
+	player := get_player()
 	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
 		e.spawner_interval_s = rand.float64_range(0.5, 2)
 		parasol := entity_create(.PARASOL)
-		parasol.pos = rl.Vector2{300, 30}
+		parasol.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, 30}
 		parasol.collision.rectangle.x = 300
 		e.last_spawn_s = rl.GetTime()
 	}
@@ -772,7 +793,6 @@ parasol_draw :: proc(e: Entity) {
 
 parasol_update :: proc(e: ^Entity) {
 
-	MOVE_SPEED_MULTIPLIER :: 1
 	BOUNCE_DURATION_S :: .3
 
 	if e.is_bounce && rl.GetTime() - e.last_bounce_s >= BOUNCE_DURATION_S {
@@ -783,9 +803,6 @@ parasol_update :: proc(e: ^Entity) {
 	if rl.GetTime() - e.created_on >= e.lifespan_s {
 		entity_destroy(e)
 	}
-
-	e.velocity.x = game_state.current_speed * MOVE_SPEED_MULTIPLIER
-	e.pos += e.velocity * rl.GetFrameTime()
 
 	// custom update of collision box because only the to of the sprite is collidable
 	e.collision.rectangle.x = e.pos.x - (e.collision.rectangle.width / 2)
@@ -816,14 +833,15 @@ init_parasol_bounce_anim :: proc() -> Animation {
 
 popsicle_spawner_setup :: proc(e: ^Entity) {
 	e.z_index = 0
-	e.spawner_interval_s = 3
+	e.spawner_interval_s = rand.float64_range(0, 3)
 }
 
 popsicle_spawner_update :: proc(e: ^Entity) {
+	player := get_player()
 	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
 		e.spawner_interval_s = rand.float64_range(0.5, 2)
 		popsicle := entity_create(.POPSICLE)
-		popsicle.pos = rl.Vector2{300, rand.float32_range(-60, 30)}
+		popsicle.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, rand.float32_range(-60, 30)}
 		popsicle.collision.rectangle.x = 300
 		popsicle.collision.rectangle.y = 10
 		e.last_spawn_s = rl.GetTime()
@@ -866,7 +884,6 @@ popsicle_update :: proc(e: ^Entity) {
 		entity_destroy(e)
 	}
 
-	e.velocity.x = game_state.current_speed * MOVE_SPEED_MULTIPLIER
 	e.pos += e.velocity * rl.GetFrameTime()
 
 	collision_box_update(e)
@@ -911,7 +928,6 @@ rocket_pickup_update :: proc(e: ^Entity) {
 		entity_destroy(e)
 	}
 
-	e.velocity.x = game_state.current_speed * MOVE_SPEED_MULTIPLIER
 	e.pos += e.velocity * rl.GetFrameTime()
 
 	collision_box_update(e)
@@ -931,14 +947,15 @@ init_rocket_pickup_idle_anim :: proc() -> Animation {
 
 rocket_pickup_spawner_setup :: proc(e: ^Entity) {
 	e.z_index = 0
-	e.spawner_interval_s = 3
+	e.spawner_interval_s = rand.float64_range(0, 3)
 }
 
 rocket_pickup_spawner_update :: proc(e: ^Entity) {
+	player := get_player()
 	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
-		e.spawner_interval_s = rand.float64_range(0.5, 2)
+		e.spawner_interval_s = rand.float64_range(0.5, 5)
 		rocket_pickup := entity_create(.ROCKET_PICKUP)
-		rocket_pickup.pos = rl.Vector2{300, rand.float32_range(20, 50)}
+		rocket_pickup.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, rand.float32_range(20, 50)}
 		rocket_pickup.collision.rectangle.x = 300
 		rocket_pickup.collision.rectangle.y = 10
 		e.last_spawn_s = rl.GetTime()

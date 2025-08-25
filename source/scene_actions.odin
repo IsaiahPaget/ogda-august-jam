@@ -43,8 +43,6 @@ game_setup :: proc() {
 	game_state.screen_shake_time = 4.0
 	game_state.screen_shake_dropOff = 5.1
 	game_state.screen_shake_speed = 40.0
-	game_state.current_speed = DEFAULT_MOVE_SPEED
-	game_state.target_speed = DEFAULT_MOVE_SPEED
 	game_state.total_distance_metres = 0
 
 	entity_create(.SUN)

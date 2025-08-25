@@ -32,13 +32,14 @@ import "core:math"
 import rl "vendor:raylib"
 
 PIXEL_WINDOW_HEIGHT :: 180
-DEBUG :: true
+DEBUG :: false
 SCREEN_WIDTH :: 1280
 SCREEN_HEIGHT :: 720
 GRAVITY :: 1000
 DEFAULT_MOVE_SPEED :: 150 // negative because world is moving not player
+MIN_SPEED :: 75
 SUN_DAMAGE :: 5
-// GLSL_VERSION :: 330
+SPAWNER_DISTANCE :: 300
 
 Handle :: struct {
 	index: int,
@@ -68,8 +69,6 @@ GameState :: struct {
 	screen_shake_dropOff:     f64,
 	screen_shake_speed:       f64,
 	// player move speed, but really the world
-	current_speed:            f32,
-	target_speed:             f32,
 	total_distance_metres:    int,
 	textures:                 Textures,
 	sounds:                   Sounds,
@@ -180,12 +179,14 @@ game_camera :: proc() -> rl.Camera2D {
 
 	target: rl.Vector2
 
+	player := get_player()
+	target = player.pos
+	target.y -= 40 // negative because raylib draws upside down
+
 	if game_state.is_screen_shaking {
 		screen_shake(&target)
 	}
 
-	player := get_player()
-	target = player.pos
 
 	return {zoom = h / PIXEL_WINDOW_HEIGHT, target = target, offset = {w / 2, h / 2}}
 }
@@ -194,20 +195,6 @@ ui_camera :: proc() -> rl.Camera2D {
 	return {zoom = f32(rl.GetScreenHeight()) / PIXEL_WINDOW_HEIGHT}
 }
 
-
-game_scene_update :: proc() {
-	game_state.total_distance_metres =
-		int(game_state.current_speed * f32(rl.GetTime() / 144) * 10) * -1 // because the world is moving backwards
-
-	SPEED_ADJUSTMENT_RATE: f32 = 0.01
-
-	// Smoothly move current_speed towards target_speed
-	game_state.current_speed = math.lerp(
-		game_state.current_speed,
-		game_state.target_speed,
-		SPEED_ADJUSTMENT_RATE,
-	)
-}
 
 update :: proc() {
 
@@ -264,12 +251,6 @@ update :: proc() {
 		case .ROCKET_PICKUP_SPAWNER:
 			rocket_pickup_spawner_update(e)
 		}
-	}
-
-	switch game_state.scene_kind {
-	case .GAME:
-		game_scene_update()
-	case .MAIN_MENU:
 	}
 
 	if rl.IsKeyPressed(.ESCAPE) {
@@ -341,14 +322,14 @@ draw :: proc() {
 	// NOTE: `fmt.ctprintf` uses the temp allocator. The temp allocator is
 	// cleared at the end of the frame by the main application, meaning inside
 	// `main_hot_reload.odin`, `main_release.odin` or `main_web_entry.odin`.
+	player := get_player()
+	game_state.total_distance_metres = int(player.pos.x / 10)
 	rl.DrawText(fmt.ctprintf("Distance: %v", game_state.total_distance_metres), 5, 5, 8, rl.WHITE)
 
 	if DEBUG {
-		player, ok := get_player()
-		if ok {
-			rl.DrawText(fmt.ctprintf("player_pos: %v", player.pos), 5, 20, 5, rl.RED)
-		}
+		rl.DrawText(fmt.ctprintf("Velocity: %v", player.velocity.x), 5, 20, 8, rl.PINK)
 	}
+
 	rl.EndMode2D()
 
 	rl.EndDrawing()
@@ -398,8 +379,6 @@ game_init :: proc() {
 			rocket_pickup_sfx = rl.LoadSound("assets/SFX/Rocket_pickup.wav"),
 		},
 		soundtrack = rl.LoadMusicStream("assets/SFX/Endless Scamper.mp3"),
-		current_speed = DEFAULT_MOVE_SPEED,
-		target_speed = DEFAULT_MOVE_SPEED,
 		textures = {
 			// Load all textures
 			// WARNING: if you add a texture you MUST also unload it game_shutdown
