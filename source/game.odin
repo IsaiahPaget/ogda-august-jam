@@ -29,18 +29,15 @@ package game
 
 import "core:fmt"
 import "core:math"
-import "core:math/linalg"
 import rl "vendor:raylib"
 
 PIXEL_WINDOW_HEIGHT :: 180
-DEBUG :: false
+DEBUG :: true
 SCREEN_WIDTH :: 1280
 SCREEN_HEIGHT :: 720
 GRAVITY :: 1000
-DEFAULT_MOVE_SPEED :: -150 // negative because world is moving not player
+DEFAULT_MOVE_SPEED :: 150 // negative because world is moving not player
 SUN_DAMAGE :: 5
-TOO_SLOW :: -200 // this is the position on the world that means you are too far back
-TOO_FAST :: 150 // this point you should not exceed
 // GLSL_VERSION :: 330
 
 Handle :: struct {
@@ -74,7 +71,6 @@ GameState :: struct {
 	current_speed:            f32,
 	target_speed:             f32,
 	total_distance_metres:    int,
-	previous_distance_metres: int,
 	textures:                 Textures,
 	sounds:                   Sounds,
 	soundtrack:               rl.Music,
@@ -188,6 +184,9 @@ game_camera :: proc() -> rl.Camera2D {
 		screen_shake(&target)
 	}
 
+	player := get_player()
+	target = player.pos
+
 	return {zoom = h / PIXEL_WINDOW_HEIGHT, target = target, offset = {w / 2, h / 2}}
 }
 
@@ -195,31 +194,6 @@ ui_camera :: proc() -> rl.Camera2D {
 	return {zoom = f32(rl.GetScreenHeight()) / PIXEL_WINDOW_HEIGHT}
 }
 
-// positive number is a speed up and vica versa
-change_speed :: proc(amount: f32) {
-	game_state.target_speed -= amount * rl.GetFrameTime()
-}
-
-input_dir_normalized :: proc() -> rl.Vector2 {
-
-	input: rl.Vector2
-
-	if rl.IsKeyDown(.UP) || rl.IsKeyDown(.W) {
-		input.y -= 1
-	}
-	if rl.IsKeyDown(.DOWN) || rl.IsKeyDown(.S) {
-		input.y += 1
-	}
-	if rl.IsKeyDown(.LEFT) || rl.IsKeyDown(.A) {
-		input.x -= 1
-	}
-	if rl.IsKeyDown(.RIGHT) || rl.IsKeyDown(.D) {
-		input.x += 1
-	}
-
-	input = linalg.normalize0(input)
-	return input
-}
 
 game_scene_update :: proc() {
 	game_state.total_distance_metres =
@@ -367,7 +341,7 @@ draw :: proc() {
 	// NOTE: `fmt.ctprintf` uses the temp allocator. The temp allocator is
 	// cleared at the end of the frame by the main application, meaning inside
 	// `main_hot_reload.odin`, `main_release.odin` or `main_web_entry.odin`.
-	rl.DrawText(fmt.ctprintf("Distance: %v", game_state.total_distance_metres - game_state.previous_distance_metres), 5, 5, 8, rl.WHITE)
+	rl.DrawText(fmt.ctprintf("Distance: %v", game_state.total_distance_metres), 5, 5, 8, rl.WHITE)
 
 	if DEBUG {
 		player, ok := get_player()

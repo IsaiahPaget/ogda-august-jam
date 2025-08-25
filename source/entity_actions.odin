@@ -35,23 +35,7 @@ player_setup :: proc(e: ^Entity) {
 player_update :: proc(e: ^Entity) {
 	fmt.assertf(e != nil, "player missing", e)
 	PLAYER_JUMP_FORCE :: -250
-
-	if e.pos.x > PLAYER_STARTING_POSITION && e.is_on_ground {
-		e.velocity.x -= 1
-	}
-
-	if e.pos.x < PLAYER_STARTING_POSITION {
-		game_state.target_speed = DEFAULT_MOVE_SPEED
-		e.pos.x += .1 // get you back on track faster
-	}
-
-	if e.pos.x < TOO_SLOW {
-		scene_setup(.MAIN_MENU)
-	}
-
-	if e.pos.x > TOO_FAST {
-		e.pos.x = TOO_FAST
-	}
+	e.velocity.x = DEFAULT_MOVE_SPEED
 
 	if rl.IsKeyPressed(.SPACE) && e.is_on_ground {
 		e.velocity.y = PLAYER_JUMP_FORCE // negative because the world is drawn from top to.CENTER
@@ -158,19 +142,16 @@ player_on_collide_parasol :: proc(player, parasol: ^Entity) {
 
 player_on_collide_pidgeon :: proc(player, pidgeon: ^Entity) {
 	do_screen_shake(1.5, 2, 60)
-	change_speed(-100)
 	pidgeon.velocity.y += -50
 	rl.PlaySound(game_state.sounds.seagull_airborne_sfx)
 }
 
 player_on_collide_towel :: proc(player, towel: ^Entity) {
 	player.velocity.x += 1
-	change_speed(20)
 }
 
 player_on_collide_crab :: proc(player, crab: ^Entity) {
 	do_screen_shake(1.5, 2, 60)
-	change_speed(-200)
 	crab.velocity.y += -300
 	rl.PlaySound(game_state.sounds.dog_pain_sfx)
 }
