@@ -8,6 +8,8 @@ import rl "vendor:raylib"
 */
 
 player_setup :: proc(e: ^Entity) {
+
+	e.pos *= 0
 	e.pos.x = 0
 	e.pos.y = 45
 	e.velocity.x = DEFAULT_MOVE_SPEED
@@ -62,7 +64,7 @@ player_update :: proc(e: ^Entity) {
 		}
 	}
 
-	player_set_speed(e,-0.05)
+	player_set_speed(e, -0.05)
 
 	if e.cur_health <= 0 {
 		rl.PlaySound(game_state.sounds.game_over)
@@ -74,37 +76,42 @@ player_update :: proc(e: ^Entity) {
 	e.pos += e.velocity * rl.GetFrameTime()
 
 	process_collisions(e, proc(entity_a, entity_b: ^Entity) {
-		switch entity_b.kind {
+		#partial switch entity_b.kind {
+		case .NIL:
 		case .CRAB:
 			player_on_collide_crab(entity_a, entity_b)
 		case .GROUND:
 			player_on_collide_ground(entity_a, entity_b)
-		case .NIL:
-		case .PLAY_BUTTON:
-		case .PLAYER:
-		case .CRAB_SPAWNER:
-		case .FOREGROUND:
-		case .BACKGROUND:
-		case .SUN:
-		case .PLAYER_HEALTH_BAR:
-		case .JUMP_POOF:
-		case .PARASOL_SPAWNER:
 		case .PARASOL:
 			player_on_collide_parasol(entity_a, entity_b)
-		case .PIDGEON_SPAWNER:
 		case .PIDGEON:
 			player_on_collide_pidgeon(entity_a, entity_b)
-		case .TOWEL_SPAWNER:
 		case .TOWEL:
 			player_on_collide_towel(entity_a, entity_b)
-		case .POPSICLE_SPAWNER:
 		case .POPSICLE:
 			player_on_collide_popsicle(entity_a, entity_b)
 		case .ROCKET_PICKUP:
 			player_on_collide_rocket_pickup(entity_a, entity_b)
-		case .ROCKET_PICKUP_SPAWNER:
+		case .COOLER_BOX:
+			player_on_collide_cooler_box(entity_a, entity_b)
 		}
 	})
+}
+
+player_on_collide_cooler_box :: proc(player, cooler_box: ^Entity) {
+	cooler_box.should_die_in_s = rl.GetTime()
+	cooler_box.dies_in_s = 0.5
+	cooler_box.animation = init_cooler_box_destroy_anim()
+
+	player_set_speed(player, -20)
+
+	if player.cur_health + 20 > player.max_health {
+		player.cur_health = player.max_health
+	} else {
+		player.cur_health += 20
+	}
+	rl.PlaySound(game_state.sounds.cooler_box_sfx)
+	do_screen_shake(1.5, 2, 60)
 }
 
 player_on_collide_rocket_pickup :: proc(player, rocket: ^Entity) {
@@ -251,6 +258,17 @@ init_player_rocket_animation :: proc() -> Animation {
 	}
 }
 
+spawner :: proc(e: ^Entity, entity_kind: EntityKind, cb: proc(entity: ^Entity)) {
+	player := get_player()
+	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s * f64(DEFAULT_MOVE_SPEED / player.velocity.x) {
+		e.spawner_interval_s = rand.float64_range(0.5, 2)
+		crab := entity_create(entity_kind)
+		cb(crab)
+		e.last_spawn_s = rl.GetTime()
+	}
+}
+
+
 /*
 * CRAB SPAWNER
 */
@@ -261,15 +279,12 @@ crab_spawner_setup :: proc(e: ^Entity) {
 }
 
 crab_spawner_update :: proc(e: ^Entity) {
-	player := get_player()
-	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
-		e.spawner_interval_s = rand.float64_range(0.5, 2)
-		crab := entity_create(.CRAB)
+	spawner(e, .CRAB, proc(crab: ^Entity) {
+		player := get_player()
 		crab.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, 20}
 		crab.collision.rectangle.x = 110
 		crab.collision.rectangle.y = 10
-		e.last_spawn_s = rl.GetTime()
-	}
+	})
 }
 
 crab_spawner_draw :: proc(e: Entity) {
@@ -317,29 +332,10 @@ crab_update :: proc(e: ^Entity) {
 	e.pos += e.velocity * rl.GetFrameTime()
 
 	process_collisions(e, proc(entity_a, entity_b: ^Entity) {
-		switch entity_b.kind {
-		case .CRAB:
+		#partial switch entity_b.kind {
+		case .NIL:
 		case .GROUND:
 			crab_on_collide_ground(entity_a, entity_b)
-		case .FOREGROUND:
-		case .NIL:
-		case .PLAY_BUTTON:
-		case .PLAYER:
-		case .CRAB_SPAWNER:
-		case .JUMP_POOF:
-		case .BACKGROUND:
-		case .SUN:
-		case .PLAYER_HEALTH_BAR:
-		case .TOWEL:
-		case .TOWEL_SPAWNER:
-		case .PIDGEON_SPAWNER:
-		case .PIDGEON:
-		case .PARASOL_SPAWNER:
-		case .PARASOL:
-		case .POPSICLE:
-		case .POPSICLE_SPAWNER:
-		case .ROCKET_PICKUP_SPAWNER:
-		case .ROCKET_PICKUP:
 		}
 	})
 }
@@ -364,7 +360,7 @@ init_crab_run_anim :: proc() -> Animation {
 // ground helper
 ground_replace :: proc(e: ^Entity) {
 	player := get_player()
-	if e.pos.x <= player.pos.x - f32(e.animation.texture.width) - 50  {
+	if e.pos.x <= player.pos.x - f32(e.animation.texture.width) - 50 {
 		// Instead of resetting to .initial_position,
 		// move this background tile just after the rightmost one
 		rightmost_x: f32 = -999999 // somewhere way off to the left of the screen
@@ -613,15 +609,12 @@ towel_spawner_setup :: proc(e: ^Entity) {
 }
 
 towel_spawner_update :: proc(e: ^Entity) {
-	player := get_player()
-	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
-		e.spawner_interval_s = rand.float64_range(1, 3)
-		towel := entity_create(.TOWEL)
+	spawner(e, .TOWEL, proc(towel: ^Entity) {
+		player := get_player()
 		towel.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, 70}
 		towel.collision.rectangle.x = 110
 		towel.collision.rectangle.y = 10
-		e.last_spawn_s = rl.GetTime()
-	}
+	})
 }
 
 towel_spawner_draw :: proc(e: Entity) {
@@ -684,15 +677,12 @@ pidgeon_spawner_setup :: proc(e: ^Entity) {
 }
 
 pidgeon_spawner_update :: proc(e: ^Entity) {
-	player := get_player()
-	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
-		e.spawner_interval_s = rand.float64_range(0.5, 2)
-		pidgeon := entity_create(.PIDGEON)
+	spawner(e, .PIDGEON, proc(pidgeon: ^Entity) {
+		player := get_player()
 		pidgeon.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, rand.float32_range(-60, 30)}
 		pidgeon.collision.rectangle.x = 300
 		pidgeon.collision.rectangle.y = 10
-		e.last_spawn_s = rl.GetTime()
-	}
+	})
 }
 
 pidgeon_spawner_draw :: proc(e: Entity) {
@@ -754,14 +744,11 @@ parasol_spawner_setup :: proc(e: ^Entity) {
 }
 
 parasol_spawner_update :: proc(e: ^Entity) {
-	player := get_player()
-	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
-		e.spawner_interval_s = rand.float64_range(0.5, 2)
-		parasol := entity_create(.PARASOL)
+	spawner(e, .PARASOL, proc(parasol: ^Entity) {
+		player := get_player()
 		parasol.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, 30}
 		parasol.collision.rectangle.x = 300
-		e.last_spawn_s = rl.GetTime()
-	}
+	})
 }
 
 parasol_spawner_draw :: proc(e: Entity) {
@@ -837,15 +824,12 @@ popsicle_spawner_setup :: proc(e: ^Entity) {
 }
 
 popsicle_spawner_update :: proc(e: ^Entity) {
-	player := get_player()
-	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
-		e.spawner_interval_s = rand.float64_range(0.5, 2)
-		popsicle := entity_create(.POPSICLE)
+	spawner(e, .POPSICLE, proc(popsicle: ^Entity) {
+		player := get_player()
 		popsicle.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, rand.float32_range(-60, 30)}
 		popsicle.collision.rectangle.x = 300
 		popsicle.collision.rectangle.y = 10
-		e.last_spawn_s = rl.GetTime()
-	}
+	})
 }
 
 popsicle_spawner_draw :: proc(e: Entity) {
@@ -951,18 +935,87 @@ rocket_pickup_spawner_setup :: proc(e: ^Entity) {
 }
 
 rocket_pickup_spawner_update :: proc(e: ^Entity) {
-	player := get_player()
-	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s {
-		e.spawner_interval_s = rand.float64_range(0.5, 5)
-		rocket_pickup := entity_create(.ROCKET_PICKUP)
+	spawner(e, .ROCKET_PICKUP, proc(rocket_pickup: ^Entity) {
+		player := get_player()
 		rocket_pickup.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, rand.float32_range(20, 50)}
 		rocket_pickup.collision.rectangle.x = 300
 		rocket_pickup.collision.rectangle.y = 10
-		e.last_spawn_s = rl.GetTime()
-	}
+	})
 }
 
 rocket_pickup_spawner_draw :: proc(e: Entity) {
+	if DEBUG {
+		rl.DrawRectangleV(e.pos, {30, 30}, rl.BLUE)
+	}
+}
+
+/*
+* COOLER_BOX
+*/
+cooler_box_setup :: proc(e: ^Entity) {
+	e.lifespan_s = 10
+	e.animation = init_cooler_box_idle_anim()
+	e.texture_offset = .CENTER
+	e.collision.rectangle = rl.Rectangle {
+		width  = 40,
+		height = 15,
+	}
+	e.collision.offset = .CENTER
+	e.collision.is_active = true
+	e.scale = .5
+	e.z_index = 9
+}
+
+cooler_box_draw :: proc(e: Entity) {
+	entity_draw_default(e)
+}
+
+cooler_box_update :: proc(e: ^Entity) {
+
+	if rl.GetTime() - e.created_on >= e.lifespan_s {
+		entity_destroy(e)
+	}
+
+	if ! (e.should_die_in_s == 0) && (rl.GetTime() - e.should_die_in_s >= e.dies_in_s) {
+		entity_destroy(e)
+	}
+
+	e.pos += e.velocity * rl.GetFrameTime()
+
+	collision_box_update(e)
+}
+
+init_cooler_box_idle_anim :: proc() -> Animation {
+	return Animation{texture = game_state.textures.cooler_box, frame_count = 1, kind = .NIL}
+}
+init_cooler_box_destroy_anim :: proc() -> Animation {
+	return Animation {
+		texture = game_state.textures.cooler_box_destroy,
+		frame_count = 8,
+		frame_length = 0.05,
+		kind = .DESTROY,
+	}
+}
+
+/*
+* COOLER_BOX SPAWNER
+*/
+
+cooler_box_spawner_setup :: proc(e: ^Entity) {
+	e.z_index = 0
+	e.spawner_interval_s = rand.float64_range(0, 3)
+}
+
+cooler_box_spawner_update :: proc(e: ^Entity) {
+	spawner(e, .COOLER_BOX, proc(cooler_box: ^Entity) {
+		player := get_player()
+		cooler_box.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, 60}
+		cooler_box.collision.rectangle.x = 300
+		cooler_box.collision.rectangle.y = 10
+	})
+}
+
+cooler_box_spawner_draw :: proc(e: Entity) {
 	if DEBUG {
 		rl.DrawRectangleV(e.pos, {30, 30}, rl.BLUE)
 	}

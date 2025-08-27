@@ -29,6 +29,8 @@ EntityKind :: enum {
 	POPSICLE_SPAWNER,
 	ROCKET_PICKUP,
 	ROCKET_PICKUP_SPAWNER,
+	COOLER_BOX,
+	COOLER_BOX_SPAWNER,
 }
 
 EntityTextureOffset :: enum {
@@ -55,6 +57,8 @@ Entity :: struct {
 	lifespan_s:           f64,
 	is_on_ground:         bool,
 	created_on:           f64,
+	dies_in_s:            f64,
+	should_die_in_s:      f64,
 
 	// SPAWNER
 	last_spawn_s:         f64, // since game init
@@ -220,7 +224,7 @@ entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 	e.kind = kind
 	e.created_on = rl.GetTime()
 
-	switch kind {
+	#partial switch kind {
 	case .NIL:
 	case .PLAYER:
 		player_setup(e)
@@ -262,5 +266,9 @@ entity_setup :: proc(e: ^Entity, kind: EntityKind) {
 		rocket_pickup_setup(e)
 	case .ROCKET_PICKUP_SPAWNER:
 		rocket_pickup_spawner_setup(e)
+	case .COOLER_BOX_SPAWNER:
+		cooler_box_spawner_setup(e)
+	case .COOLER_BOX:
+		cooler_box_setup(e)
 	}
 }

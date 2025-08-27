@@ -111,6 +111,8 @@ Textures :: struct {
 	jump_poof:           rl.Texture2D,
 	popsicle:            rl.Texture2D,
 	title:               rl.Texture2D,
+	cooler_box:          rl.Texture2D,
+	cooler_box_destroy:  rl.Texture2D,
 }
 
 game_state: ^GameState
@@ -195,7 +197,6 @@ ui_camera :: proc() -> rl.Camera2D {
 	return {zoom = f32(rl.GetScreenHeight()) / PIXEL_WINDOW_HEIGHT}
 }
 
-
 update :: proc() {
 
 	game_state.scratch = {}
@@ -250,6 +251,10 @@ update :: proc() {
 			rocket_pickup_update(e)
 		case .ROCKET_PICKUP_SPAWNER:
 			rocket_pickup_spawner_update(e)
+		case .COOLER_BOX:
+			cooler_box_update(e)
+		case .COOLER_BOX_SPAWNER:
+			cooler_box_spawner_update(e)
 		}
 	}
 
@@ -313,6 +318,10 @@ draw :: proc() {
 			rocket_pickup_draw(e^)
 		case .ROCKET_PICKUP_SPAWNER:
 			rocket_pickup_spawner_draw(e^)
+		case .COOLER_BOX:
+			cooler_box_draw(e^)
+		case .COOLER_BOX_SPAWNER:
+			cooler_box_spawner_draw(e^)
 		}
 	}
 
@@ -402,6 +411,8 @@ game_init :: proc() {
 			jump_poof           = rl.LoadTexture("assets/jump-poof.png"),
 			popsicle            = rl.LoadTexture("assets/Popsicle.png"),
 			title               = rl.LoadTexture("assets/CorgiTitle.png"),
+			cooler_box          = rl.LoadTexture("assets/cooler-box.png"),
+			cooler_box_destroy  = rl.LoadTexture("assets/cooler-box-destroy.png"),
 		},
 	}
 
@@ -450,6 +461,8 @@ game_shutdown :: proc() {
 	rl.UnloadTexture(game_state.textures.jump_poof)
 	rl.UnloadTexture(game_state.textures.popsicle)
 	rl.UnloadTexture(game_state.textures.title)
+	rl.UnloadTexture(game_state.textures.cooler_box)
+	rl.UnloadTexture(game_state.textures.cooler_box_destroy)
 
 	delete(game_state.entity_free_list) // free the entity freelist
 	free(game_state)

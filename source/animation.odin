@@ -20,6 +20,7 @@ AnimationKind :: enum {
 	BOUNCE, // for parasol
 	FALL,
 	ROCKET,
+	DESTROY,
 }
 
 animate :: proc(entity: ^Entity) {
