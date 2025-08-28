@@ -103,7 +103,7 @@ player_on_collide_cooler_box :: proc(player, cooler_box: ^Entity) {
 	cooler_box.dies_in_s = 0.5
 	cooler_box.animation = init_cooler_box_destroy_anim()
 
-	player_set_speed(player, -15)
+	player_set_speed(player, -70)
 	cooler_box.collision.is_active = false
 
 	if player.cur_health + 20 > player.max_health {
