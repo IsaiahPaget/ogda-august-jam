@@ -32,7 +32,7 @@ import "core:math"
 import rl "vendor:raylib"
 
 PIXEL_WINDOW_HEIGHT :: 180
-DEBUG :: true
+DEBUG :: false
 SCREEN_WIDTH :: 1280
 SCREEN_HEIGHT :: 720
 GRAVITY :: 1000
