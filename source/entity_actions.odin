@@ -103,7 +103,8 @@ player_on_collide_cooler_box :: proc(player, cooler_box: ^Entity) {
 	cooler_box.dies_in_s = 0.5
 	cooler_box.animation = init_cooler_box_destroy_anim()
 
-	player_set_speed(player, -20)
+	player_set_speed(player, -15)
+	cooler_box.collision.is_active = false
 
 	if player.cur_health + 20 > player.max_health {
 		player.cur_health = player.max_health
@@ -155,12 +156,13 @@ player_on_collide_parasol :: proc(player, parasol: ^Entity) {
 player_on_collide_pidgeon :: proc(player, pidgeon: ^Entity) {
 	do_screen_shake(1.5, 2, 60)
 	pidgeon.velocity.y += -50
+	pidgeon.collision.is_active = false
 	player_set_speed(player, -5)
 	rl.PlaySound(game_state.sounds.seagull_airborne_sfx)
 }
 
 player_on_collide_towel :: proc(player, towel: ^Entity) {
-	player_set_speed(player, 3)
+	player_set_speed(player, 10)
 	towel.collision.is_active = false
 }
 
@@ -258,10 +260,10 @@ init_player_rocket_animation :: proc() -> Animation {
 	}
 }
 
-spawner :: proc(e: ^Entity, entity_kind: EntityKind, cb: proc(entity: ^Entity)) {
+spawner :: proc(e: ^Entity, range: [2]f64, entity_kind: EntityKind, cb: proc(entity: ^Entity)) {
 	player := get_player()
 	if rl.GetTime() - e.last_spawn_s >= e.spawner_interval_s * f64(DEFAULT_MOVE_SPEED / player.velocity.x) {
-		e.spawner_interval_s = rand.float64_range(0.5, 2)
+		e.spawner_interval_s = rand.float64_range(range.x, range.y)
 		crab := entity_create(entity_kind)
 		cb(crab)
 		e.last_spawn_s = rl.GetTime()
@@ -279,7 +281,7 @@ crab_spawner_setup :: proc(e: ^Entity) {
 }
 
 crab_spawner_update :: proc(e: ^Entity) {
-	spawner(e, .CRAB, proc(crab: ^Entity) {
+	spawner(e, {0.5, 2}, .CRAB,  proc(crab: ^Entity) {
 		player := get_player()
 		crab.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, 20}
 		crab.collision.rectangle.x = 110
@@ -609,7 +611,7 @@ towel_spawner_setup :: proc(e: ^Entity) {
 }
 
 towel_spawner_update :: proc(e: ^Entity) {
-	spawner(e, .TOWEL, proc(towel: ^Entity) {
+	spawner(e, {2, 4}, .TOWEL, proc(towel: ^Entity) {
 		player := get_player()
 		towel.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, 70}
 		towel.collision.rectangle.x = 110
@@ -677,7 +679,7 @@ pidgeon_spawner_setup :: proc(e: ^Entity) {
 }
 
 pidgeon_spawner_update :: proc(e: ^Entity) {
-	spawner(e, .PIDGEON, proc(pidgeon: ^Entity) {
+	spawner(e, {0.5, 2}, .PIDGEON, proc(pidgeon: ^Entity) {
 		player := get_player()
 		pidgeon.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, rand.float32_range(-60, 30)}
 		pidgeon.collision.rectangle.x = 300
@@ -744,7 +746,7 @@ parasol_spawner_setup :: proc(e: ^Entity) {
 }
 
 parasol_spawner_update :: proc(e: ^Entity) {
-	spawner(e, .PARASOL, proc(parasol: ^Entity) {
+	spawner(e, {1, 3}, .PARASOL, proc(parasol: ^Entity) {
 		player := get_player()
 		parasol.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, 30}
 		parasol.collision.rectangle.x = 300
@@ -824,7 +826,7 @@ popsicle_spawner_setup :: proc(e: ^Entity) {
 }
 
 popsicle_spawner_update :: proc(e: ^Entity) {
-	spawner(e, .POPSICLE, proc(popsicle: ^Entity) {
+	spawner(e, {0.5, 2}, .POPSICLE, proc(popsicle: ^Entity) {
 		player := get_player()
 		popsicle.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, rand.float32_range(-60, 30)}
 		popsicle.collision.rectangle.x = 300
@@ -935,7 +937,7 @@ rocket_pickup_spawner_setup :: proc(e: ^Entity) {
 }
 
 rocket_pickup_spawner_update :: proc(e: ^Entity) {
-	spawner(e, .ROCKET_PICKUP, proc(rocket_pickup: ^Entity) {
+	spawner(e, {0.5, 2}, .ROCKET_PICKUP, proc(rocket_pickup: ^Entity) {
 		player := get_player()
 		rocket_pickup.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, rand.float32_range(20, 50)}
 		rocket_pickup.collision.rectangle.x = 300
@@ -955,12 +957,12 @@ rocket_pickup_spawner_draw :: proc(e: Entity) {
 cooler_box_setup :: proc(e: ^Entity) {
 	e.lifespan_s = 10
 	e.animation = init_cooler_box_idle_anim()
-	e.texture_offset = .CENTER
+	e.texture_offset = .BOTTOM
 	e.collision.rectangle = rl.Rectangle {
-		width  = 40,
+		width  = 20,
 		height = 15,
 	}
-	e.collision.offset = .CENTER
+	e.collision.offset = .BOTTOM
 	e.collision.is_active = true
 	e.scale = .5
 	e.z_index = 9
@@ -1007,9 +1009,9 @@ cooler_box_spawner_setup :: proc(e: ^Entity) {
 }
 
 cooler_box_spawner_update :: proc(e: ^Entity) {
-	spawner(e, .COOLER_BOX, proc(cooler_box: ^Entity) {
+	spawner(e, {1, 3}, .COOLER_BOX, proc(cooler_box: ^Entity) {
 		player := get_player()
-		cooler_box.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, 60}
+		cooler_box.pos = rl.Vector2{player.pos.x + SPAWNER_DISTANCE, 70}
 		cooler_box.collision.rectangle.x = 300
 		cooler_box.collision.rectangle.y = 10
 	})
